@@ -1,5 +1,6 @@
 /* ============================================================
-   🍽️ RESTORAN SİSTEMİ — TAM CSS (MOBİL + KOMPÜTER UYĞUN)
+   🍽️ RESTORAN SİSTEMİ — TAM CSS (MOBİL + KOMPÜTER)
+   Sürüşmə düzəlişi daxildir
    ============================================================ */
 
 * {
@@ -11,16 +12,12 @@
 
 html {
     scroll-behavior: smooth;
-    overflow-x: hidden;
-    max-width: 100vw;
 }
 
 body {
     background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
     min-height: 100vh;
     color: #fff;
-    overflow-x: hidden;
-    max-width: 100vw;
     width: 100%;
     position: relative;
     transition: background 0.5s;
@@ -28,7 +25,6 @@ body {
 
 button, .kat, .mehsul, .masa, .tab {
     -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
 }
 
 input, select, textarea { font-size: 16px; }
@@ -428,7 +424,7 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
     max-width: 100%;
 }
 
-/* KATEQORİYALAR — yalnız bu sürüşsün */
+/* KATEQORİYALAR — SÜRÜŞƏN */
 .kats {
     display: flex;
     gap: 8px;
@@ -437,12 +433,16 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
     overflow-y: hidden;
     flex-wrap: nowrap;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(233,69,96,0.6) rgba(255,255,255,0.05);
     max-width: 100%;
-    padding-bottom: 5px;
-    touch-action: pan-x;
+    padding-bottom: 10px;
+    cursor: grab;
 }
-.kats::-webkit-scrollbar { display: none; }
+.kats:active { cursor: grabbing; }
+.kats::-webkit-scrollbar { height: 6px; display: block; }
+.kats::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
+.kats::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.7); border-radius: 3px; }
 
 .kat {
     padding: 9px 18px;
@@ -618,7 +618,6 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
     z-index: 9999;
     padding: 20px;
     overflow-y: auto;
-    overflow-x: hidden;
 }
 .modal-cek {
     background: #fff;
@@ -660,11 +659,15 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(233,69,96,0.6) rgba(255,255,255,0.05);
     max-width: 100%;
-    touch-action: pan-x;
+    cursor: grab;
 }
-.tabs::-webkit-scrollbar { display: none; }
+.tabs:active { cursor: grabbing; }
+.tabs::-webkit-scrollbar { height: 6px; display: block; }
+.tabs::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
+.tabs::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.7); border-radius: 3px; }
 
 .tab {
     padding: 12px 22px;
@@ -689,14 +692,20 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
 .panel { display: none; }
 .panel.active { display: block; animation: fadeInUp 0.4s ease; }
 
-/* CƏDVƏLLƏR — yalnız cədvəl sürüşsün */
+/* CƏDVƏLLƏR — SÜRÜŞƏN */
 .table-wrap {
     overflow-x: auto;
+    overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     max-width: 100%;
     border-radius: 12px;
-    touch-action: pan-x;
+    cursor: grab;
 }
+.table-wrap:active { cursor: grabbing; }
+.table-wrap::-webkit-scrollbar { height: 6px; display: block; }
+.table-wrap::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
+.table-wrap::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.7); border-radius: 3px; }
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -705,7 +714,16 @@ table {
     border-radius: 12px;
     overflow: hidden;
     min-width: 500px;
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    cursor: grab;
 }
+table:active { cursor: grabbing; }
+table::-webkit-scrollbar { height: 6px; display: block; }
+table::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
+table::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.7); border-radius: 3px; }
+
 th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
 th {
     background: linear-gradient(135deg, rgba(233,69,96,0.4), rgba(233,69,96,0.2));
@@ -904,7 +922,7 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
 }
 
 /* ============================================================
-   📱 MOBİL UYĞUNLAŞDIRMA (900px-ə qədər)
+   📱 TABLET (900px-ə qədər)
    ============================================================ */
 @media (max-width: 900px) {
     .container { padding: 15px; }
@@ -922,13 +940,10 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
     .qrafik-grid { grid-template-columns: 1fr; }
 
     .alt-duymeler { grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 25px; padding-top: 20px; }
-
-    table { min-width: 500px; }
-    th, td { padding: 10px 12px; }
 }
 
 /* ============================================================
-   📱 MOBİL (600px-ə qədər) — DAHA KİÇİK ÖLÇÜLƏR
+   📱 MOBİL (600px-ə qədər)
    ============================================================ */
 @media (max-width: 600px) {
     /* HEADER */
@@ -992,12 +1007,16 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
     .esas-ad { font-size: 14px; margin-bottom: 5px; }
     .esas-info { font-size: 10px; }
 
-    /* KATEQORİYALAR */
-    .kats { gap: 6px; padding-bottom: 6px; margin-bottom: 12px; }
+    /* KATEQORİYALAR — SÜRÜŞƏN */
+    .kats {
+        gap: 6px;
+        padding-bottom: 12px;
+        margin-bottom: 12px;
+    }
     .kat {
-        padding: 6px 12px;
+        padding: 7px 14px;
         font-size: 11px;
-        border-radius: 16px;
+        border-radius: 18px;
     }
 
     /* MƏHSULLAR — 2 SIRA */
@@ -1043,14 +1062,22 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
     .alt-header .btn-geri { width: 100%; padding: 10px; font-size: 12px; }
     .alt-header .s-title { text-align: center; font-size: 14px; }
 
-    /* TAB-LAR */
-    .tabs { padding: 5px; border-radius: 10px; gap: 4px; margin-bottom: 15px; }
-    .tab { padding: 7px 12px; font-size: 11px; border-radius: 8px; }
+    /* TAB-LAR — SÜRÜŞƏN */
+    .tabs {
+        padding: 6px;
+        border-radius: 10px;
+        gap: 5px;
+        margin-bottom: 15px;
+    }
+    .tab {
+        padding: 8px 14px;
+        font-size: 11px;
+        border-radius: 8px;
+    }
 
     /* CƏDVƏL */
-    .table-wrap { border-radius: 10px; }
     table { min-width: 450px; font-size: 11px; }
-    th, td { padding: 6px 8px; font-size: 11px; }
+    th, td { padding: 7px 9px; font-size: 11px; }
     th { font-size: 10px; }
 
     /* FORM */
@@ -1100,7 +1127,7 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
     .qrafik-card { padding: 12px; border-radius: 12px; margin-bottom: 15px; }
     .q-title { font-size: 13px; margin-bottom: 10px; }
 
-    /* MODAL — KOMPAKT */
+    /* MODAL */
     .modal-overlay {
         padding: 8px;
         align-items: flex-start;
