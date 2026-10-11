@@ -1,7 +1,7 @@
 /* ============================================================
-   🍽️ RESTORAN SİSTEMİ — TAM CSS (Kompüter + Planşet + Mobil)
-   Əsas qayda: SƏHİFƏ yana sürüşmür, yalnız daxili elementlər
-   (kateqoriyalar, tab-lar, cədvəllər) öz içində sürüşür.
+   🍽️ RESTORAN SİSTEMİ — TAM CSS
+   Kompüter + Planşet + Mobil
+   ƏSAS QAYDA: Səhifə yana sürüşmür, yalnız daxili elementlər
    ============================================================ */
 
 * {
@@ -11,7 +11,6 @@
     font-family: 'Segoe UI', Tahoma, sans-serif;
 }
 
-/* 🔒 SƏHİFƏNİN YANA SÜRÜŞMƏSİNİN QARŞISINI ALIR */
 html {
     scroll-behavior: smooth;
     width: 100%;
@@ -435,8 +434,6 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
 /* ============================================================
    🍔 MENYU + SƏBƏT
    ============================================================ */
-/* minmax(0,1fr) — uzun kateqoriya siyahısı grid-i genişləndirib
-   səhifəni yana itələməsin deyə */
 .menyu-wrap {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 360px;
@@ -446,7 +443,7 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
 }
 .menyu-wrap > * { min-width: 0; }
 
-/* KATEQORİYALAR — yalnız özü sürüşür, səhifə yox */
+/* KATEQORİYALAR — yalnız özü sürüşür */
 .kats {
     display: flex;
     gap: 8px;
@@ -659,7 +656,7 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
     padding: 30px;
     max-width: 440px;
     width: 100%;
-    margin: auto;               /* ortada durur, yüksək olsa yuxarıdan başlayıb sürüşür */
+    margin: auto;
     max-height: 90vh;
     max-height: 90dvh;
     overflow-y: auto;
@@ -668,7 +665,6 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
     animation: bounceIn 0.4s ease;
     word-break: break-word;
 }
-/* Çekin içindəki hər şey modala sığsın (cədvəl 700px olub böyütməsin) */
 .modal-cek * { max-width: 100%; }
 .modal-cek table {
     min-width: 0 !important;
@@ -680,7 +676,7 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
     cursor: default;
     table-layout: auto;
 }
-.modal-cek th, .modal-cek td { padding: 6px 4px; font-size: 13px; color: #000; border-bottom: 1px dashed #ccc; }
+.modal-cek th, .modal-cek td { padding: 6px 8px; font-size: 13px; color: #000; border-bottom: 1px dashed #ccc; white-space: normal; }
 .modal-cek th { background: #f0f0f0; }
 .modal-cek tr:hover td { background: transparent; }
 
@@ -698,7 +694,7 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
 #endirimModal input:focus { border-color: #e94560; box-shadow: 0 0 12px rgba(233, 69, 96, 0.25); }
 
 /* ============================================================
-   👨‍💼 ADMİN PANELİ
+   👨‍💼 ADMİN PANELİ — TAB-LAR
    ============================================================ */
 .tabs {
     display: flex;
@@ -748,7 +744,75 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
 .panel { display: none; min-width: 0; max-width: 100%; }
 .panel.active { display: block; animation: fadeInUp 0.4s ease; }
 
-/* CƏDVƏLLƏR — cədvəlin özü (və ya .table-wrap) sürüşür, səhifə yox */
+/* ============================================================
+   📊 CƏDVƏLLƏR — ƏSAS QAYDA
+   Kompüterdə: tam eni istifadə edir (display: table)
+   Mobil/Planşetdə: özü sürüşür (display: block + overflow-x: auto)
+   ============================================================ */
+
+/* 1️⃣ KOMPÜTER (901px və yuxarı) — Tam eni istifadə edir */
+table {
+    width: 100%;
+    max-width: 100%;
+    border-collapse: collapse;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    overflow: hidden;
+    display: table;
+    table-layout: auto;
+}
+
+th, td {
+    padding: 14px 18px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    white-space: nowrap;
+}
+th {
+    background: linear-gradient(135deg, rgba(233,69,96,0.4), rgba(233,69,96,0.2));
+    font-size: 14px;
+    font-weight: 700;
+}
+td { font-size: 15px; }
+tr:hover td { background: rgba(255, 255, 255, 0.05); }
+
+/* 2️⃣ MOBİL + PLANŞET (900px-ə qədər) — Cədvəl özü sürüşür */
+@media (max-width: 900px) {
+    table {
+        display: block;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(233,69,96,0.8) rgba(255,255,255,0.1);
+        cursor: grab;
+        white-space: nowrap;
+    }
+    table:active { cursor: grabbing; }
+    table::-webkit-scrollbar { height: 6px; display: block; }
+    table::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    table::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.8); border-radius: 3px; }
+
+    /* Mobil cədvəl içi minimum en */
+    table thead,
+    table tbody {
+        display: table;
+        width: 100%;
+        min-width: 600px;
+    }
+
+    th, td {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+    th { font-size: 12px; }
+}
+
+/* ============================================================
+   📋 TABLE-WRAP (əgər JS-də istifadə olunursa)
+   ============================================================ */
 .table-wrap {
     overflow-x: auto;
     overflow-y: hidden;
@@ -764,48 +828,16 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
 .table-wrap::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 3px; }
 .table-wrap::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.8); border-radius: 3px; }
 
-table {
+.table-wrap table {
+    display: table;
+    min-width: 100%;
     width: 100%;
-    max-width: 100%;
-    border-collapse: collapse;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(10px);
-    border-radius: 12px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    display: block;             /* özü sürüşsün deyə */
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-x: contain;
-    cursor: grab;
-}
-table:active { cursor: grabbing; }
-table::-webkit-scrollbar { height: 6px; display: block; }
-table::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 3px; }
-table::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.8); border-radius: 3px; }
-
-/* 🖥️ YALNIZ KOMPÜTER (901px və yuxarı): cədvəl ekranın eninə tam açılsın.
-   (display:block cədvəli məzmunun ölçüsünə sıxırdı — burada normal cədvələ qaytarırıq.
-   Telefon və planşet qaydalarına toxunulmayıb.) */
-@media (min-width: 901px) {
-    table {
-        display: table;
-        width: 100%;
-        overflow: visible;
-        cursor: default;
-    }
-    table:active { cursor: default; }
+    overflow: visible;
 }
 
-th, td { padding: 14px 18px; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.08); white-space: nowrap; }
-th {
-    background: linear-gradient(135deg, rgba(233,69,96,0.4), rgba(233,69,96,0.2));
-    font-size: 14px;
-    font-weight: 700;
-}
-td { font-size: 15px; }
-tr:hover td { background: rgba(255, 255, 255, 0.05); }
-
-/* FORMLAR */
+/* ============================================================
+   FORMLAR
+   ============================================================ */
 .form { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
 .form input, .form select {
     padding: 12px 16px;
@@ -832,7 +864,9 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
 }
 .form button:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(233, 69, 96, 0.4); }
 
-/* STATİSTİKA */
+/* ============================================================
+   STATİSTİKA
+   ============================================================ */
 .stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -869,7 +903,9 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
 }
 .stat .l { color: #aaa; font-size: 13px; margin-top: 5px; font-weight: 600; }
 
-/* KİÇİK DÜYMƏLƏR */
+/* ============================================================
+   KİÇİK DÜYMƏLƏR
+   ============================================================ */
 .small-btn {
     border: none;
     color: #fff;
@@ -885,7 +921,9 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
 .edit-b { background: linear-gradient(135deg, #3498db, #2980b9); }
 .del-b { background: linear-gradient(135deg, #e74c3c, #c0392b); }
 
-/* AKTİV MASA KARTLARI */
+/* ============================================================
+   AKTİV MASA KARTLARI
+   ============================================================ */
 .aktiv-masa-kart {
     background: linear-gradient(145deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03));
     backdrop-filter: blur(10px);
@@ -925,7 +963,9 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
 .aktiv-masa-btnler { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
 .aktiv-masa-btnler .small-btn { padding: 11px 20px; font-size: 14px; border-radius: 9px; font-weight: 700; }
 
-/* SIFIRLAMA */
+/* ============================================================
+   SIFIRLAMA
+   ============================================================ */
 .sifirla-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -971,7 +1011,9 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
 .sifirla-btn.danger:hover { transform: scale(1.04); box-shadow: 0 8px 22px rgba(231, 76, 60, 0.5); }
 .sifirla-btn.big { padding: 18px 30px; font-size: 16px; margin-top: 15px; }
 
-/* QRAFİKLƏR */
+/* ============================================================
+   QRAFİKLƏR
+   ============================================================ */
 .qrafik-card {
     background: linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
     backdrop-filter: blur(10px);
@@ -1013,10 +1055,9 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
 }
 
 /* ============================================================
-   📱 MOBİL (600px-ə qədər) — hər şey kiçildilib
+   📱 MOBİL (600px-ə qədər)
    ============================================================ */
 @media (max-width: 600px) {
-    /* iOS-da fixed fon problem yaradır */
     body[class*="bg-"] { background-attachment: scroll; }
 
     /* HEADER */
@@ -1059,7 +1100,7 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
     .esas-ad { font-size: 18px; margin-bottom: 6px; }
     .esas-info { font-size: 12px; }
 
-    /* KATEQORİYALAR (özü sürüşür) */
+    /* KATEQORİYALAR */
     .kats { gap: 6px; margin-bottom: 14px; padding-bottom: 8px; }
     .kat { padding: 7px 13px; font-size: 12px; }
     .kat.active, .kat:hover { transform: none; }
@@ -1084,13 +1125,14 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
     .alt-duymeler { grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 18px; padding-top: 14px; }
     .alt-duymeler .s-btn { padding: 12px 14px; font-size: 14px; }
 
-    /* TAB-LAR (özü sürüşür) */
+    /* TAB-LAR */
     .tabs { padding: 5px; gap: 5px; margin-bottom: 14px; }
     .tab { padding: 8px 13px; font-size: 12px; }
 
-    /* CƏDVƏLLƏR (özü sürüşür) */
+    /* CƏDVƏLLƏR */
     th, td { padding: 8px 10px; font-size: 12px; }
     th { font-size: 11px; }
+    table thead, table tbody { min-width: 600px; }
 
     /* FORM */
     .form { flex-direction: column; align-items: stretch; gap: 8px; }
@@ -1125,7 +1167,7 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
     .chart-wrap { height: 220px; }
     .q-title { font-size: 14px; margin-bottom: 12px; }
 
-    /* 🧾 MODAL / ÇEK — telefona uyğun kiçik */
+    /* MODAL / ÇEK */
     .modal-overlay { padding: 10px; }
     .modal-cek {
         padding: 16px 14px;
