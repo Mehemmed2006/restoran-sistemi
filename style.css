@@ -783,6 +783,19 @@ table::-webkit-scrollbar { height: 6px; display: block; }
 table::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 3px; }
 table::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.8); border-radius: 3px; }
 
+/* 🖥️ YALNIZ KOMPÜTER (901px və yuxarı): cədvəl ekranın eninə tam açılsın.
+   (display:block cədvəli məzmunun ölçüsünə sıxırdı — burada normal cədvələ qaytarırıq.
+   Telefon və planşet qaydalarına toxunulmayıb.) */
+@media (min-width: 901px) {
+    table {
+        display: table;
+        width: 100%;
+        overflow: visible;
+        cursor: default;
+    }
+    table:active { cursor: default; }
+}
+
 th, td { padding: 14px 18px; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.08); white-space: nowrap; }
 th {
     background: linear-gradient(135deg, rgba(233,69,96,0.4), rgba(233,69,96,0.2));
