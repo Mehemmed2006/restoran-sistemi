@@ -1,7 +1,7 @@
 // ============================================================
 // 🍽️ RESTORAN SİSTEMİ — FIREBASE + TOAST + LOADING + CONFIRM
 // ============================================================
-console.log('✅ app.js yükləndi (v2)');
+console.log('✅ app.js yükləndi (v3)');
 
 window.addEventListener('error', e => {
     let b = document.getElementById('xetaQutusu');
@@ -69,11 +69,14 @@ function toast(mesaj, növ = 'success', müddət = 3000) {
 }
 
 // ============================================================
-// 🆕 LOADING — Yükləmə göstəricisi
+// 🆕 LOADING — Yükləmə göstəricisi (30 saniyədən sonra özü bağlanır)
 // ============================================================
+let _loadingT = null;
 function loading(göstər = true) {
     const mövcud = document.getElementById('loadingOverlay');
     if (göstər) {
+        clearTimeout(_loadingT);
+        _loadingT = setTimeout(() => loading(false), 30000); // təhlükəsizlik
         if (mövcud) return;
         const el = document.createElement('div');
         el.className = 'loading-overlay';
@@ -81,9 +84,16 @@ function loading(göstər = true) {
         el.innerHTML = '<div class="loading-spinner"></div>';
         document.body.appendChild(el);
     } else {
+        clearTimeout(_loadingT);
         if (mövcud) mövcud.remove();
     }
 }
+
+// İstənilən gözlənilməz xəta olsa: çarx bağlansın + bildiriş çıxsın
+window.addEventListener('unhandledrejection', e => {
+    loading(false);
+    toast('❌ Xəta: ' + ((e.reason && e.reason.message) || e.reason), 'error', 5000);
+});
 
 // ============================================================
 // 🆕 CONFIRM — Gözəl təsdiq pəncərəsi
@@ -144,23 +154,32 @@ function dinle() {
             } else if (DATA.hazir) {
                 ekranYenile();
             }
+        }, err => {
+            loading(false);
+            toast('❌ Firebase xətası: ' + err.message, 'error', 8000);
         });
     });
 }
 
 async function ilkYukleme() {
-    if (!DATA.isciler.length) {
-        await FB.set(DR('isciler/1'), {id: 1, kod: '9999', ad: 'Admin', rol: 'admin'});
+    try {
+        if (!DATA.isciler.length) {
+            await FB.set(DR('isciler/1'), {id: 1, kod: '9999', ad: 'Admin', rol: 'admin'});
+        }
+        if (!DATA.masalar.length) {
+            const masalar = {};
+            for (let i = 1; i <= 12; i++) masalar[i] = {id: i, ad: 'Masa ' + i, nov: 'masa', status: 'bos'};
+            for (let i = 1; i <= 2; i++) masalar[12 + i] = {id: 12 + i, ad: 'Kabinet ' + i, nov: 'kabinet', status: 'bos'};
+            await FB.set(DR('masalar'), masalar);
+        }
+        if (!DATA.sayac || !DATA.sayac.sifaris) {
+            await FB.set(DR('sayac'), {sifaris: 1, sessiya: 1, isci: 2, alis: 1, endirim: 1, paket: 1});
+        }
+    } catch (e) {
+        console.error(e);
+        toast('❌ Başlanğıc xətası: ' + e.message, 'error', 6000);
     }
-    if (!DATA.masalar.length) {
-        const masalar = {};
-        for (let i = 1; i <= 12; i++) masalar[i] = {id: i, ad: 'Masa ' + i, nov: 'masa', status: 'bos'};
-        for (let i = 1; i <= 2; i++) masalar[12 + i] = {id: 12 + i, ad: 'Kabinet ' + i, nov: 'kabinet', status: 'bos'};
-        await FB.set(DR('masalar'), masalar);
-    }
-    if (!DATA.sayac || !DATA.sayac.sifaris) {
-        await FB.set(DR('sayac'), {sifaris: 1, sessiya: 1, isci: 2, alis: 1, endirim: 1, paket: 1});
-    }
+    loading(false);   // ← çarx burada bağlanır
 
     const user = istifadeciAl();
     if (user) panelGoster(user.rol);
@@ -303,7 +322,9 @@ function girisEt() {
     }
     localStorage.setItem('resto_aktiv', JSON.stringify({id: isci.id, kod: isci.kod}));
     kodDeyeri = '';
-    toast(`👋 Xoş gəldiniz, ${isci.ad}!`, 'success');
+    const saat = new Date().getHours();
+    const salam = saat < 6 ? 'Gecəniz xeyrə' : saat < 12 ? 'Sabahınız xeyir' : saat < 18 ? 'Günortanız xeyir' : 'Axşamınız xeyir';
+    toast(`👋 ${salam}, ${isci.ad}! Xoş gəldiniz`, 'success');
     panelGoster(isci.rol);
 }
 function cixisEt() {
@@ -722,48 +743,54 @@ function sifarisTamamla(S, cek) {
     endirimModal(toplam, async ed => {
         if (!ed) return;
         loading(true);
-        const s0 = await S.hazirla();
-        if (!s0) { loading(false); return; }
-        S.sessiya = s0;
-        const user = istifadeciAl();
+        try {
+            const s0 = await S.hazirla();
+            if (!s0) { loading(false); return; }
+            S.sessiya = s0;
+            const user = istifadeciAl();
 
-        await sifarisElave(s0.id, S.masaId, S.masaAd, S.sebet);
+            await sifarisElave(s0.id, S.masaId, S.masaAd, S.sebet);
 
-        const s = DATA.sessiyalar.find(x => x.id === s0.id) || s0;
-        const yeniMebleg = (s.mebleg || 0) + toplam;
-        const yeniYekun = (s.yekun || 0) + ed.yekun;
-        const yeniEndirim = (s.endirim_mebleg || 0) + ed.endirim;
-        await FB.update(DR('sessiyalar/' + s0.id), {
-            mebleg: yeniMebleg,
-            yekun: yeniYekun,
-            endirim_mebleg: yeniEndirim,
-            endirim_faiz: yeniMebleg ? Math.round(yeniEndirim / yeniMebleg * 1000) / 10 : 0,
-            endirim_ad: ed.ad || s.endirim_ad || ''
-        });
-
-        if (S.masaId) {
-            await FB.update(DR('masalar/' + S.masaId), {status: 'dolu'});
-        }
-
-        if (ed.faiz > 0) {
-            const eid = await yeniId('endirim');
-            await FB.set(DR('endirimler/' + eid), {
-                id: eid, tip: S.masaId ? 'masa' : 'paket',
-                masa_ad: S.masaId ? S.masaAd : 'Paket #' + s0.paket_nomre,
-                musteri_ad: ed.ad || s0.musteri_ad || '(ad yoxdur)',
-                faiz: ed.faiz, evvelki: toplam, endirim: ed.endirim, yekun: ed.yekun,
-                isci_id: user.id, isci_ad: user.ad, tarix: new Date().toISOString()
+            const s = DATA.sessiyalar.find(x => x.id === s0.id) || s0;
+            const yeniMebleg = (s.mebleg || 0) + toplam;
+            const yeniYekun = (s.yekun || 0) + ed.yekun;
+            const yeniEndirim = (s.endirim_mebleg || 0) + ed.endirim;
+            await FB.update(DR('sessiyalar/' + s0.id), {
+                mebleg: yeniMebleg,
+                yekun: yeniYekun,
+                endirim_mebleg: yeniEndirim,
+                endirim_faiz: yeniMebleg ? Math.round(yeniEndirim / yeniMebleg * 1000) / 10 : 0,
+                endirim_ad: ed.ad || s.endirim_ad || ''
             });
-        }
 
-        S.sebet = [];
-        loading(false);
-        toast('✅ Sifariş göndərildi! Yekun: ' + pul(ed.yekun), 'success');
-        if (cek) {
-            if (S.masaId) masaCekiVeBagla(S, s0.id);
-            else { sessiyaCeki(s0.id, 'Paket #' + s0.paket_nomre); S.ekran(); }
-        } else {
-            S.geri();
+            if (S.masaId) {
+                await FB.update(DR('masalar/' + S.masaId), {status: 'dolu'});
+            }
+
+            if (ed.faiz > 0) {
+                const eid = await yeniId('endirim');
+                await FB.set(DR('endirimler/' + eid), {
+                    id: eid, tip: S.masaId ? 'masa' : 'paket',
+                    masa_ad: S.masaId ? S.masaAd : 'Paket #' + s0.paket_nomre,
+                    musteri_ad: ed.ad || s0.musteri_ad || '(ad yoxdur)',
+                    faiz: ed.faiz, evvelki: toplam, endirim: ed.endirim, yekun: ed.yekun,
+                    isci_id: user.id, isci_ad: user.ad, tarix: new Date().toISOString()
+                });
+            }
+
+            S.sebet = [];
+            loading(false);
+            toast('✅ Sifariş göndərildi! Yekun: ' + pul(ed.yekun), 'success');
+            if (cek) {
+                if (S.masaId) masaCekiVeBagla(S, s0.id);
+                else { sessiyaCeki(s0.id, 'Paket #' + s0.paket_nomre); S.ekran(); }
+            } else {
+                S.geri();
+            }
+        } catch (err) {
+            loading(false);
+            console.error(err);
+            toast('❌ Sifariş xətası: ' + err.message, 'error', 5000);
         }
     });
 }
@@ -943,10 +970,15 @@ async function pk_yeniPaket() {
     const unvan = (prompt('Ünvan:') || '').trim();
     if (!unvan) { toast('❌ Ünvan lazımdır!', 'error'); return; }
     loading(true);
-    const s = await sessiyaYarat(null, 'Paket', 'paket', {musteri_ad, musteri_tel, unvan});
-    loading(false);
-    toast('✅ Paket yaradıldı: #' + s.paket_nomre, 'success');
-    setTimeout(() => pk_menyuAc(s.id), 300);
+    try {
+        const s = await sessiyaYarat(null, 'Paket', 'paket', {musteri_ad, musteri_tel, unvan});
+        loading(false);
+        toast('✅ Paket yaradıldı: #' + s.paket_nomre, 'success');
+        setTimeout(() => pk_menyuAc(s.id), 300);
+    } catch (err) {
+        loading(false);
+        toast('❌ Xəta: ' + err.message, 'error', 5000);
+    }
 }
 
 function pk_menyuAc(id) {
@@ -961,10 +993,13 @@ async function pk_bagla(id) {
     confirmDialog('Paketi bağlamaq istəyirsiniz?', async cavab => {
         if (!cavab) return;
         loading(true);
-        await sessiyaBagla(id);
-        loading(false);
-        if (PK.sessiya && PK.sessiya.id === id) { PK.sessiya = null; PK.sebet = []; }
-        toast('✅ Paket bağlandı', 'success');
+        try {
+            await sessiyaBagla(id);
+            if (PK.sessiya && PK.sessiya.id === id) { PK.sessiya = null; PK.sebet = []; }
+            toast('✅ Paket bağlandı', 'success');
+        } finally {
+            loading(false);
+        }
         pk_render();
     }, 'Paketi bağla', '📦');
 }
@@ -1112,17 +1147,20 @@ async function ka_alisElave() {
     const qeyd = document.getElementById('ka-malQeyd').value.trim();
     if (!mal_ad || !qiymet) { toast('Mal adı və qiymət lazımdır!', 'error'); return; }
     loading(true);
-    const user = istifadeciAl();
-    const aid = await yeniId('alis');
-    await FB.set(DR('alislar/' + aid), {
-        id: aid, mal_ad, qiymet, miqdar, cemi: qiymet * miqdar, qeyd,
-        isci_id: user.id, isci_ad: user.ad, tarix: new Date().toISOString()
-    });
-    loading(false);
-    ['ka-malAd', 'ka-malQiymet', 'ka-malQeyd'].forEach(i => document.getElementById(i).value = '');
-    document.getElementById('ka-malMiqdar').value = '1';
-    toast('✅ Alış əlavə edildi!', 'success');
-    ka_alislariYukle();
+    try {
+        const user = istifadeciAl();
+        const aid = await yeniId('alis');
+        await FB.set(DR('alislar/' + aid), {
+            id: aid, mal_ad, qiymet, miqdar, cemi: qiymet * miqdar, qeyd,
+            isci_id: user.id, isci_ad: user.ad, tarix: new Date().toISOString()
+        });
+        ['ka-malAd', 'ka-malQiymet', 'ka-malQeyd'].forEach(i => document.getElementById(i).value = '');
+        document.getElementById('ka-malMiqdar').value = '1';
+        toast('✅ Alış əlavə edildi!', 'success');
+        ka_alislariYukle();
+    } finally {
+        loading(false);
+    }
 }
 
 // ============================================================
@@ -1219,26 +1257,32 @@ async function ad_isciElaveEt() {
         toast('❌ Maksimum 2 kassir ola bilər!', 'error'); return;
     }
     loading(true);
-    const id = await yeniId('isci');
-    await FB.set(DR('isciler/' + id), {id, kod, ad, rol});
-    loading(false);
-    document.getElementById('yeniKod').value = '';
-    document.getElementById('yeniAd').value = '';
-    toast('✅ İşçi əlavə edildi!', 'success');
+    try {
+        const id = await yeniId('isci');
+        await FB.set(DR('isciler/' + id), {id, kod, ad, rol});
+        document.getElementById('yeniKod').value = '';
+        document.getElementById('yeniAd').value = '';
+        toast('✅ İşçi əlavə edildi!', 'success');
+    } finally {
+        loading(false);
+    }
     setTimeout(ad_iscileriYukle, 300);
 }
 
 async function ad_isciSil(id) {
     const isci = DATA.isciler.find(i => i.id === id);
     if (!isci || isci.rol === 'admin') return;
-    confirmDialog(`"${isci.ad}" adlı işçini silmək istəyirsiniz? Bu əməliyyat geri qaytarıla bilməz.`, async cavab => {
+    confirmDialog(`"${esc(isci.ad)}" adlı işçini silmək istəyirsiniz? Bu əməliyyat geri qaytarıla bilməz.`, async cavab => {
         if (!cavab) return;
         loading(true);
-        const aktivS = DATA.sessiyalar.filter(s => s.isci_id === id && s.status === 'aktiv');
-        for (const s of aktivS) await sessiyaBagla(s.id);
-        await FB.remove(DR('isciler/' + id));
-        loading(false);
-        toast(`✅ "${isci.ad}" silindi!`, 'success');
+        try {
+            const aktivS = DATA.sessiyalar.filter(s => s.isci_id === id && s.status === 'aktiv');
+            for (const s of aktivS) await sessiyaBagla(s.id);
+            await FB.remove(DR('isciler/' + id));
+            toast(`✅ "${isci.ad}" silindi!`, 'success');
+        } finally {
+            loading(false);
+        }
         setTimeout(ad_iscileriYukle, 300);
     }, 'İşçini sil', '🗑️');
 }
@@ -1284,11 +1328,12 @@ function ad_aktivMasalariYukle() {
     sess.sort((a, b) => b.id - a.id).forEach(s => {
         const sif = DATA.sifarisler.filter(x => x.sessiya_id === s.id);
         const tbl = h('table', {style: 'margin-top:15px;'},
-            h('thead', {}, h('tr', {}, ...['Məhsul', 'Miqdar', 'Qiymət', 'Məbləğ', 'Saat'].map(t => h('th', {}, t)))),
+            h('thead', {}, h('tr', {}, ...['Məhsul', 'Miqdar', 'Qiymət', 'Məbləğ', 'Saat', 'Sil'].map(t => h('th', {}, t)))),
             h('tbody', {}, ...sif.map(x => h('tr', {},
                 h('td', {}, x.mehsul_ad), h('td', {}, x.miqdar), h('td', {}, pul(x.qiymet)),
                 h('td', {style: 'color:#e94560;font-weight:bold;'}, pul(x.mebleg)),
-                h('td', {style: 'color:#aaa;font-size:12px;'}, new Date(x.tarix).toLocaleTimeString('az-AZ'))))));
+                h('td', {style: 'color:#aaa;font-size:12px;'}, new Date(x.tarix).toLocaleTimeString('az-AZ')),
+                h('td', {}, h('button', {className: 'small-btn del-b', onclick: () => ad_sifarisSil(x.id)}, '🗑️'))))));
         el.appendChild(h('div', {className: 'aktiv-masa-kart'},
             h('div', {className: 'aktiv-masa-header'},
                 h('div', {},
@@ -1305,13 +1350,45 @@ function ad_aktivMasalariYukle() {
     timerBaslat();
 }
 
+async function ad_sifarisSil(id) {
+    const x = DATA.sifarisler.find(o => o.id === id);
+    if (!x) return;
+    confirmDialog(`"${esc(x.mehsul_ad)} x${x.miqdar}" sifarişini silmək istəyirsiniz?`, async cavab => {
+        if (!cavab) return;
+        loading(true);
+        try {
+            const s = DATA.sessiyalar.find(y => y.id === x.sessiya_id);
+            await FB.remove(DR('sifarisler/' + id));
+            if (s) {
+                // endirim faizi saxlanılır, məbləğlər yenidən hesablanır
+                const nisbet = s.mebleg ? (s.endirim_mebleg || 0) / s.mebleg : 0;
+                const yeniMebleg = Math.max(0, (s.mebleg || 0) - x.mebleg);
+                const yeniEndirim = yeniMebleg * nisbet;
+                await FB.update(DR('sessiyalar/' + s.id), {
+                    mebleg: yeniMebleg,
+                    endirim_mebleg: yeniEndirim,
+                    yekun: yeniMebleg - yeniEndirim,
+                    endirim_faiz: yeniMebleg ? Math.round(nisbet * 1000) / 10 : 0
+                });
+            }
+            toast('✅ Sifariş silindi', 'success');
+        } finally {
+            loading(false);
+        }
+        setTimeout(ad_aktivMasalariYukle, 300);
+    }, 'Sifarişi sil', '🗑️');
+}
+
 async function ad_masaBosalt(id) {
     confirmDialog('Masayı bağlamaq/boşaltmaq istəyirsiniz?', async cavab => {
         if (!cavab) return;
         loading(true);
-        await sessiyaBagla(id);
-        loading(false);
-        toast('✅ Masa boşaldıldı', 'success');
+        try {
+            await sessiyaBagla(id);
+            toast('✅ Masa boşaldıldı', 'success');
+        } finally {
+            loading(false);
+        }
         setTimeout(ad_aktivMasalariYukle, 300);
     }, 'Masanı boşalt', '🗑️');
 }
@@ -1357,8 +1434,13 @@ function ad_alislariYukle() {
 async function ad_alisSil(id) {
     confirmDialog('Alışı silmək istəyirsiniz?', async cavab => {
         if (!cavab) return;
-        await FB.remove(DR('alislar/' + id));
-        toast('✅ Silindi', 'success');
+        loading(true);
+        try {
+            await FB.remove(DR('alislar/' + id));
+            toast('✅ Silindi', 'success');
+        } finally {
+            loading(false);
+        }
         setTimeout(ad_alislariYukle, 300);
     }, 'Alışı sil', '🗑️');
 }
@@ -1598,13 +1680,16 @@ async function ad_adminOzKodDeyis() {
     const user = istifadeciAl();
     if (DATA.isciler.find(i => i.kod === kod && i.id !== user.id)) return xeta('❌ Bu kod mövcuddur!');
     loading(true);
-    await FB.update(DR('isciler/' + user.id), {kod, ad});
-    localStorage.setItem('resto_aktiv', JSON.stringify({id: user.id, kod}));
-    loading(false);
-    m.style.color = '#2ecc71'; m.textContent = '✅ Dəyişdirildi!';
-    toast('✅ Admin məlumatları yeniləndi!', 'success');
-    const adEl = document.querySelector('.header .info .user-name');
-    if (adEl) adEl.textContent = '👨‍💼 ' + ad;
+    try {
+        await FB.update(DR('isciler/' + user.id), {kod, ad});
+        localStorage.setItem('resto_aktiv', JSON.stringify({id: user.id, kod}));
+        m.style.color = '#2ecc71'; m.textContent = '✅ Dəyişdirildi!';
+        toast('✅ Admin məlumatları yeniləndi!', 'success');
+        const adEl = document.querySelector('.header .info .user-name');
+        if (adEl) adEl.textContent = '👨‍💼 ' + ad;
+    } finally {
+        loading(false);
+    }
 }
 
 // SIFIRLA
@@ -1646,51 +1731,50 @@ async function ad_sifirla(no) {
         'isciler': '⚠️ Bütün işçilər silinəcək!',
         'her-sey': '🚨 HƏR ŞEY SİLİNƏCƏK!'
     }[no];
-    
+
     confirmDialog(mesaj + ' Davam etmək üçün admin kodunuzu daxil edin.', async cavab => {
         if (!cavab) return;
         const kodDaxil = prompt('🔑 Admin kodu:');
         if (kodDaxil !== user.kod) { toast('❌ Kod yanlışdır!', 'error'); return; }
-        
-        loading(true);
-        const masalariBosalt = async () => {
-            for (const m of DATA.masalar) await FB.update(DR('masalar/' + m.id), {status: 'bos'});
-        };
-        const sayacSifirla = async ad => { await FB.set(DR('sayac/' + ad), 1); };
 
-        if (no === 'masalar') {
-            for (const s of DATA.sessiyalar.filter(s => s.tip === 'masa')) await FB.remove(DR('sessiyalar/' + s.id));
-            for (const s of DATA.sifarisler.filter(x => {
-                const ss = DATA.sessiyalar.find(y => y.id === x.sessiya_id);
-                return ss && ss.tip === 'masa';
-            })) await FB.remove(DR('sifarisler/' + s.id));
-            await masalariBosalt();
-        }
-        if (no === 'paketler') {
-            for (const s of DATA.sessiyalar.filter(s => s.tip === 'paket')) await FB.remove(DR('sessiyalar/' + s.id));
-            for (const s of DATA.sifarisler.filter(x => {
-                const ss = DATA.sessiyalar.find(y => y.id === x.sessiya_id);
-                return ss && ss.tip === 'paket';
-            })) await FB.remove(DR('sifarisler/' + s.id));
-            await sayacSifirla('paket');
-        }
-        if (no === 'alislar') {
-            for (const a of DATA.alislar) await FB.remove(DR('alislar/' + a.id));
-        }
-        if (no === 'isciler') {
-            for (const s of DATA.sessiyalar.filter(s => s.status === 'aktiv')) await sessiyaBagla(s.id);
-            for (const i of DATA.isciler.filter(x => x.rol !== 'admin')) await FB.remove(DR('isciler/' + i.id));
-        }
-        if (no === 'her-sey') {
-            for (const k of ['sifarisler', 'sessiyalar', 'alislar', 'endirimler']) {
-                for (const x of DATA[k]) await FB.remove(DR(k + '/' + x.id));
+        loading(true);
+        try {
+            const masalariBosalt = async () => {
+                for (const m of DATA.masalar) await FB.update(DR('masalar/' + m.id), {status: 'bos'});
+            };
+            const sayacSifirla = async ad => { await FB.set(DR('sayac/' + ad), 1); };
+
+            if (no === 'masalar') {
+                const masaSessiyaIdleri = DATA.sessiyalar.filter(s => s.tip === 'masa').map(s => s.id);
+                for (const x of DATA.sifarisler.filter(x => masaSessiyaIdleri.includes(x.sessiya_id))) await FB.remove(DR('sifarisler/' + x.id));
+                for (const s of DATA.sessiyalar.filter(s => s.tip === 'masa')) await FB.remove(DR('sessiyalar/' + s.id));
+                await masalariBosalt();
             }
-            for (const i of DATA.isciler.filter(x => x.rol !== 'admin')) await FB.remove(DR('isciler/' + i.id));
-            await masalariBosalt();
-            await FB.set(DR('sayac'), {sifaris: 1, sessiya: 1, isci: 2, alis: 1, endirim: 1, paket: 1});
+            if (no === 'paketler') {
+                const paketSessiyaIdleri = DATA.sessiyalar.filter(s => s.tip === 'paket').map(s => s.id);
+                for (const x of DATA.sifarisler.filter(x => paketSessiyaIdleri.includes(x.sessiya_id))) await FB.remove(DR('sifarisler/' + x.id));
+                for (const s of DATA.sessiyalar.filter(s => s.tip === 'paket')) await FB.remove(DR('sessiyalar/' + s.id));
+                await sayacSifirla('paket');
+            }
+            if (no === 'alislar') {
+                for (const a of DATA.alislar) await FB.remove(DR('alislar/' + a.id));
+            }
+            if (no === 'isciler') {
+                for (const s of DATA.sessiyalar.filter(s => s.status === 'aktiv')) await sessiyaBagla(s.id);
+                for (const i of DATA.isciler.filter(x => x.rol !== 'admin')) await FB.remove(DR('isciler/' + i.id));
+            }
+            if (no === 'her-sey') {
+                for (const k of ['sifarisler', 'sessiyalar', 'alislar', 'endirimler']) {
+                    for (const x of DATA[k]) await FB.remove(DR(k + '/' + x.id));
+                }
+                for (const i of DATA.isciler.filter(x => x.rol !== 'admin')) await FB.remove(DR('isciler/' + i.id));
+                await masalariBosalt();
+                await FB.set(DR('sayac'), {sifaris: 1, sessiya: 1, isci: 2, alis: 1, endirim: 1, paket: 1});
+            }
+            toast('✅ Sıfırlandı!', 'success');
+        } finally {
+            loading(false);
         }
-        loading(false);
-        toast('✅ Sıfırlandı!', 'success');
         setTimeout(() => ad_render(), 500);
     }, 'Sıfırlama', '⚠️');
 }
@@ -1716,12 +1800,15 @@ window.addEventListener('load', () => {
 
         document.addEventListener('keydown', e => {
             if (!document.querySelector('.login-wrap')) return;
-            if (e.key >= '0' && e.key <= '9') reqemElave(e.key);
-            if (e.key === 'Backspace') { e.preventDefault(); sonSil(); }
-            if (e.key === 'Enter') girisEt();
+            if (document.getElementById('confirmModal') || document.getElementById('loadingOverlay')) return;
+            if (/^\d$/.test(e.key)) reqemElave(e.key);
+            else if (e.key === 'Backspace') { e.preventDefault(); sonSil(); }
+            else if (e.key === 'Escape') koduTemizle();
+            else if (e.key === 'Enter') girisEt();
         });
         console.log('✅ Sistem hazırdır');
     } catch (err) {
+        loading(false);
         console.error('❌ Xəta:', err);
         toast('Xəta: ' + err.message, 'error');
     }
