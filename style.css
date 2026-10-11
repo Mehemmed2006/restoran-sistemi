@@ -1,6 +1,6 @@
 /* ============================================================
-   🍽️ RESTORAN SİSTEMİ — TAM CSS (MOBİL + KOMPÜTER)
-   Sürüşmə düzəlişi daxildir
+   🍽️ RESTORAN SİSTEMİ — TAM CSS
+   Sürüşmə düzəlişi + Mobil optimallaşdırma
    ============================================================ */
 
 * {
@@ -424,25 +424,39 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
     max-width: 100%;
 }
 
-/* KATEQORİYALAR — SÜRÜŞƏN */
+/* ============================================================
+   ⭐ KATEQORİYALAR — SÜRÜŞƏN (DÜZƏLDİLDİ)
+   ============================================================ */
 .kats {
     display: flex;
     gap: 8px;
     margin-bottom: 20px;
-    overflow-x: auto;
-    overflow-y: hidden;
     flex-wrap: nowrap;
+    overflow-x: scroll;
+    overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
-    scrollbar-color: rgba(233,69,96,0.6) rgba(255,255,255,0.05);
+    scrollbar-color: rgba(233,69,96,0.8) rgba(255,255,255,0.1);
     max-width: 100%;
+    width: 100%;
     padding-bottom: 10px;
     cursor: grab;
 }
+
 .kats:active { cursor: grabbing; }
-.kats::-webkit-scrollbar { height: 6px; display: block; }
-.kats::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
-.kats::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.7); border-radius: 3px; }
+
+.kats::-webkit-scrollbar {
+    height: 6px;
+    display: block;
+}
+.kats::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+.kats::-webkit-scrollbar-thumb {
+    background: rgba(233, 69, 96, 0.8);
+    border-radius: 3px;
+}
 
 .kat {
     padding: 9px 18px;
@@ -456,6 +470,7 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
     font-weight: 600;
     white-space: nowrap;
     flex-shrink: 0;
+    flex-grow: 0;
 }
 .kat.active, .kat:hover {
     background: linear-gradient(135deg, #e94560, #c73650);
@@ -647,6 +662,10 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
 /* ============================================================
    👨‍💼 ADMİN PANELİ
    ============================================================ */
+
+/* ============================================================
+   ⭐ TAB-LAR — SÜRÜŞƏN (DÜZƏLDİLDİ)
+   ============================================================ */
 .tabs {
     display: flex;
     gap: 10px;
@@ -656,18 +675,29 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
     background: rgba(0, 0, 0, 0.35);
     border-radius: 14px;
     backdrop-filter: blur(10px);
-    overflow-x: auto;
+    overflow-x: scroll;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
-    scrollbar-color: rgba(233,69,96,0.6) rgba(255,255,255,0.05);
+    scrollbar-color: rgba(233,69,96,0.8) rgba(255,255,255,0.1);
     max-width: 100%;
+    width: 100%;
     cursor: grab;
 }
 .tabs:active { cursor: grabbing; }
-.tabs::-webkit-scrollbar { height: 6px; display: block; }
-.tabs::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
-.tabs::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.7); border-radius: 3px; }
+
+.tabs::-webkit-scrollbar {
+    height: 6px;
+    display: block;
+}
+.tabs::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+.tabs::-webkit-scrollbar-thumb {
+    background: rgba(233, 69, 96, 0.8);
+    border-radius: 3px;
+}
 
 .tab {
     padding: 12px 22px;
@@ -681,6 +711,7 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
     transition: 0.3s;
     white-space: nowrap;
     flex-shrink: 0;
+    flex-grow: 0;
 }
 .tab:hover { background: rgba(233, 69, 96, 0.2); color: #fff; transform: translateY(-2px); }
 .tab.active {
@@ -692,19 +723,24 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
 .panel { display: none; }
 .panel.active { display: block; animation: fadeInUp 0.4s ease; }
 
-/* CƏDVƏLLƏR — SÜRÜŞƏN */
+/* ============================================================
+   ⭐ CƏDVƏLLƏR — SÜRÜŞƏN (DÜZƏLDİLDİ)
+   ============================================================ */
 .table-wrap {
-    overflow-x: auto;
+    overflow-x: scroll;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(233,69,96,0.8) rgba(255,255,255,0.1);
     max-width: 100%;
+    width: 100%;
     border-radius: 12px;
     cursor: grab;
 }
 .table-wrap:active { cursor: grabbing; }
 .table-wrap::-webkit-scrollbar { height: 6px; display: block; }
-.table-wrap::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
-.table-wrap::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.7); border-radius: 3px; }
+.table-wrap::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 3px; }
+.table-wrap::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.8); border-radius: 3px; }
 
 table {
     width: 100%;
@@ -715,14 +751,14 @@ table {
     overflow: hidden;
     min-width: 500px;
     display: block;
-    overflow-x: auto;
+    overflow-x: scroll;
     -webkit-overflow-scrolling: touch;
     cursor: grab;
 }
 table:active { cursor: grabbing; }
 table::-webkit-scrollbar { height: 6px; display: block; }
-table::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
-table::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.7); border-radius: 3px; }
+table::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 3px; }
+table::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.8); border-radius: 3px; }
 
 th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
 th {
@@ -1013,9 +1049,10 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
         padding-bottom: 12px;
         margin-bottom: 12px;
     }
+    .kats::-webkit-scrollbar { height: 8px; }
     .kat {
-        padding: 7px 14px;
-        font-size: 11px;
+        padding: 8px 14px;
+        font-size: 12px;
         border-radius: 18px;
     }
 
@@ -1069,9 +1106,10 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
         gap: 5px;
         margin-bottom: 15px;
     }
+    .tabs::-webkit-scrollbar { height: 8px; }
     .tab {
-        padding: 8px 14px;
-        font-size: 11px;
+        padding: 9px 14px;
+        font-size: 12px;
         border-radius: 8px;
     }
 
@@ -1079,6 +1117,7 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
     table { min-width: 450px; font-size: 11px; }
     th, td { padding: 7px 9px; font-size: 11px; }
     th { font-size: 10px; }
+    table::-webkit-scrollbar { height: 8px; }
 
     /* FORM */
     .form { flex-direction: column; align-items: stretch; gap: 6px; }
