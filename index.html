@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍽️ Restoran Sistemi</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, get, onValue, push, child, update, remove }
+            from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDab6Aff_y_1-0ZxpUP-6XzmtzP0pYrAqY",
+            authDomain: "nm-resturant.firebaseapp.com",
+            databaseURL: "https://nm-resturant-default-rtdb.firebaseio.com",
+            projectId: "nm-resturant",
+            storageBucket: "nm-resturant.firebasestorage.app",
+            messagingSenderId: "422935346371",
+            appId: "1:422935346371:web:a3bb254e02b912de73f676"
+        };
+
+        const fbApp = initializeApp(firebaseConfig);
+        const fbDB = getDatabase(fbApp);
+
+        window.firebase = { db: fbDB, ref, set, get, onValue, push, child, update, remove };
+
+        const s = document.createElement('script');
+        s.src = 'app.js';
+        document.body.appendChild(s);
+    </script>
+</body>
+</html>
