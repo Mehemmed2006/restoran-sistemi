@@ -1,7 +1,7 @@
 // ============================================================
 // 🍽️ RESTORAN SİSTEMİ — FIREBASE + TOAST + CONFIRM
 // ============================================================
-console.log('✅ app.js yükləndi (v4 - spinner silindi)');
+console.log('✅ app.js yükləndi (v5 - yeni paket forması)');
 
 window.addEventListener('error', e => {
     let b = document.getElementById('xetaQutusu');
@@ -936,19 +936,82 @@ function pk_render() {
     });
 }
 
+// ============================================================
+// 🆕 YENİ PAKET FORMASI — Gözəl modal
+// ============================================================
 async function pk_yeniPaket() {
-    const musteri_ad = (prompt('Müştəri adı:') || '').trim();
-    if (!musteri_ad) { toast('❌ Ad lazımdır!', 'error'); return; }
-    const musteri_tel = (prompt('Telefon:') || '').trim();
-    const unvan = (prompt('Ünvan:') || '').trim();
-    if (!unvan) { toast('❌ Ünvan lazımdır!', 'error'); return; }
-    try {
-        const s = await sessiyaYarat(null, 'Paket', 'paket', {musteri_ad, musteri_tel, unvan});
-        toast('✅ Paket yaradıldı: #' + s.paket_nomre, 'success');
-        setTimeout(() => pk_menyuAc(s.id), 300);
-    } catch (err) {
-        toast('❌ Xəta: ' + err.message, 'error', 5000);
-    }
+    // Köhnə modal varsa sil
+    const kohne = document.getElementById('yeniPaketModal');
+    if (kohne) kohne.remove();
+
+    // Modal yarat
+    const modal = h('div', {className: 'modal-overlay', id: 'yeniPaketModal'},
+        h('div', {className: 'modal-cek', style: 'max-width: 420px;'},
+            h('h3', {style: 'text-align:center; margin-bottom:20px; color:#f39c12; font-size:20px;'}, '📦 Yeni Paket Sifarişi'),
+            h('div', {style: 'display:flex; flex-direction:column; gap:14px;'},
+                h('div', {},
+                    h('label', {style: 'display:block; font-size:13px; color:#aaa; margin-bottom:5px; font-weight:600;'}, '👤 Müştəri adı *'),
+                    h('input', {
+                        type: 'text', id: 'pk-ad', placeholder: 'Məsələn: Əli Məmmədov',
+                        style: 'width:100%; padding:12px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.5); color:#fff; font-size:15px; outline:none;'
+                    })
+                ),
+                h('div', {},
+                    h('label', {style: 'display:block; font-size:13px; color:#aaa; margin-bottom:5px; font-weight:600;'}, '📞 Telefon'),
+                    h('input', {
+                        type: 'tel', id: 'pk-tel', placeholder: 'Məsələn: 0501234567',
+                        style: 'width:100%; padding:12px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.5); color:#fff; font-size:15px; outline:none;'
+                    })
+                ),
+                h('div', {},
+                    h('label', {style: 'display:block; font-size:13px; color:#aaa; margin-bottom:5px; font-weight:600;'}, '📍 Ünvan *'),
+                    h('input', {
+                        type: 'text', id: 'pk-unvan', placeholder: 'Məsələn: Nizami küç. 15, mənzil 8',
+                        style: 'width:100%; padding:12px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.5); color:#fff; font-size:15px; outline:none;'
+                    })
+                ),
+                h('p', {style: 'font-size:11px; color:#888; margin:0;'}, '* - Məcburi sahələr'),
+                h('button', {
+                    className: 's-btn b-tamam',
+                    onclick: async () => {
+                        const ad = document.getElementById('pk-ad').value.trim();
+                        const tel = document.getElementById('pk-tel').value.trim();
+                        const unvan = document.getElementById('pk-unvan').value.trim();
+                        
+                        if (!ad) { toast('❌ Müştəri adı lazımdır!', 'error'); return; }
+                        if (!unvan) { toast('❌ Ünvan lazımdır!', 'error'); return; }
+                        
+                        modal.remove();
+                        try {
+                            const s = await sessiyaYarat(null, 'Paket', 'paket', {musteri_ad: ad, musteri_tel: tel, unvan});
+                            toast('✅ Paket yaradıldı: #' + s.paket_nomre, 'success');
+                            setTimeout(() => pk_menyuAc(s.id), 300);
+                        } catch (err) {
+                            toast('❌ Xəta: ' + err.message, 'error', 5000);
+                        }
+                    }
+                }, '✅ Paketi Yarat'),
+                h('button', {
+                    className: 's-btn b-geri',
+                    onclick: () => modal.remove()
+                }, '← Ləğv et')
+            )
+        )
+    );
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+
+    // İlk input-a fokus
+    setTimeout(() => document.getElementById('pk-ad')?.focus(), 100);
+
+    // Enter ilə təsdiqləmə
+    modal.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            modal.querySelector('.s-btn.b-tamam').click();
+        }
+        if (e.key === 'Escape') modal.remove();
+    });
 }
 
 function pk_menyuAc(id) {
