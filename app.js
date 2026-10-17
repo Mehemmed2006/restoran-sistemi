@@ -1,7 +1,7 @@
 // ============================================================
-// 🍽️ RESTORAN SİSTEMİ — v12 (10 Düzəliş)
+// 🍽️ RESTORAN SİSTEMİ — v13 (Bütün düzəlişlər)
 // ============================================================
-console.log('✅ app.js yükləndi (v12)');
+console.log('✅ app.js yükləndi (v13)');
 
 window.addEventListener('error', e => {
     let b = document.getElementById('xetaQutusu');
@@ -14,7 +14,7 @@ window.addEventListener('error', e => {
     b.textContent += '❌ ' + (e.message || 'Xəta') + (e.lineno ? ' (sətir ' + e.lineno + ')' : '') + '\n';
 });
 
-// ==================== MENYU (Admin tərəfindən idarə olunacaq) ====================
+// ==================== MENYU ====================
 let MENYU = {
     'Dönərlər': {'Toyuq çörək': 2.80, 'Toyuq lavaş': 3.00, 'Ət çörək': 3.70, 'Ət lavaş': 3.90, 'Ət plovüstü': 12.50, 'Toyuq plovüstü': 11.50, 'İskəndər': 12.00},
     'Pizzalar': {'Pizza Margarita': 9.00, 'Pizza Meatlover': 13.00, 'Pizza Miks': 12.00, 'Pizza Chicken': 10.00},
@@ -35,35 +35,29 @@ let MENYU = {
     'Moxitolar': {'Moxito Classik': 6.50, 'Moxito Çiyələkli': 6.50, 'Moxito Energy': 6.50}
 };
 
-let YEMEKLER = ['Dönərlər', 'Pizzalar', 'Kabablar', 'Şorbalar', 'Burger & Sendviçlər', 'Salatlar', 'Pastalar', 'Pidələr', 'Lahmacun', 'Desertlər'];
-let ICKILER = ['Klassik Kofelər', 'Limonadlar', 'Ice Tea', 'Sərinləşdirici İçkilər', 'Özel Soyuq Dadlar', 'Milkshakelər', 'Moxitolar'];
+const ICKI_KATS = ['Klassik Kofelər', 'Limonadlar', 'Ice Tea', 'Sərinləşdirici İçkilər', 'Özel Soyuq Dadlar', 'Milkshakelər', 'Moxitolar'];
+let YEMEKLER = [];
+let ICKILER = [];
 let MEHSUL_KAT = {};
-let MENYU_STOK = {}; // Stokda olmayan məhsullar
+let MENYU_STOK = {};
 
 function menyuYenile() {
     MEHSUL_KAT = {};
     Object.entries(MENYU).forEach(([k, m]) => Object.keys(m).forEach(a => MEHSUL_KAT[a] = k));
-    
-    // YEMEKLER və ICKILER-i yenilə (stokdakı kateqoriyalar)
-    const kats = Object.keys(MENYU);
-    YEMEKLER = kats.filter(k => !['Klassik Kofelər', 'Limonadlar', 'Ice Tea', 'Sərinləşdirici İçkilər', 'Özel Soyuq Dadlar', 'Milkshakelər', 'Moxitolar'].includes(k));
-    ICKILER = kats.filter(k => ['Klassik Kofelər', 'Limonadlar', 'Ice Tea', 'Sərinləşdirici İçkilər', 'Özel Soyuq Dadlar', 'Milkshakelər', 'Moxitolar'].includes(k));
+    YEMEKLER = Object.keys(MENYU).filter(k => !ICKI_KATS.includes(k));
+    ICKILER = Object.keys(MENYU).filter(k => ICKI_KATS.includes(k));
 }
 menyuYenile();
 
-// ==================== FIREBASE ====================
 const FB = window.firebase;
 const DR = (path) => FB.ref(FB.db, path);
 
 const DATA = {
     isciler: [], masalar: [], sessiyalar: [], sifarisler: [],
-    alislar: [], endirimler: [], sayac: {}, selfOrders: [], 
-    menyu: null, stok: {}, hazir: false
+    alislar: [], endirimler: [], sayac: {}, selfOrders: [], hazir: false
 };
 
-// ============================================================
-// 🆕 Toast
-// ============================================================
+// ==================== TOAST ====================
 function toast(mesaj, növ = 'success', müddət = 3000) {
     let wrap = document.querySelector('.toast-wrap');
     if (!wrap) {
@@ -85,9 +79,7 @@ window.addEventListener('unhandledrejection', e => {
     toast('❌ Xəta: ' + ((e.reason && e.reason.message) || e.reason), 'error', 5000);
 });
 
-// ============================================================
-// 🆕 Confirm
-// ============================================================
+// ==================== CONFIRM ====================
 function confirmDialog(mesaj, callback, başlıq = 'Təsdiq', icon = '❓') {
     const mövcud = document.getElementById('confirmModal');
     if (mövcud) mövcud.remove();
@@ -118,9 +110,7 @@ function confirmDialog(mesaj, callback, başlıq = 'Təsdiq', icon = '❓') {
     };
 }
 
-// ============================================================
-// 🆕 ÖDƏNİŞ MODALI (Düzəliş 3, 6)
-// ============================================================
+// ==================== ÖDƏNİŞ MODALI ====================
 function odenisModal(callback) {
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
@@ -131,15 +121,9 @@ function odenisModal(callback) {
             <h3 style="text-align:center;margin-bottom:20px;color:#e94560;font-size:20px;">💰 Ödəniş Növü</h3>
             <p style="text-align:center;color:#aaa;margin-bottom:20px;font-size:14px;">Zəhmət olmasa ödəniş növünü seçin</p>
             <div style="display:flex;flex-direction:column;gap:12px;">
-                <button class="s-btn" style="background:linear-gradient(135deg,#27ae60,#219a52);padding:18px;font-size:16px;" onclick="window.__odenisSec('nagd')">
-                    💵 Nağd
-                </button>
-                <button class="s-btn" style="background:linear-gradient(135deg,#3498db,#2980b9);padding:18px;font-size:16px;" onclick="window.__odenisSec('kart')">
-                    💳 Kart
-                </button>
-                <button class="s-btn b-geri" style="padding:12px;font-size:14px;" onclick="document.getElementById('odenisModal').remove(); window.__odenisSec(null);">
-                    ← Ləğv et
-                </button>
+                <button class="s-btn" style="background:linear-gradient(135deg,#27ae60,#219a52);padding:18px;font-size:16px;" onclick="window.__odenisSec('nagd')">💵 Nağd</button>
+                <button class="s-btn" style="background:linear-gradient(135deg,#3498db,#2980b9);padding:18px;font-size:16px;" onclick="window.__odenisSec('kart')">💳 Kart</button>
+                <button class="s-btn b-geri" style="padding:12px;font-size:14px;" onclick="document.getElementById('odenisModal').remove(); window.__odenisSec(null);">← Ləğv et</button>
             </div>
         </div>
     `;
@@ -151,7 +135,7 @@ function odenisModal(callback) {
     };
 }
 
-// ==================== REAL-TIME DİNGLƏYİCİLƏR ====================
+// ==================== REAL-TIME ====================
 let _dinlemeBasladi = false;
 
 function dinle() {
@@ -164,19 +148,10 @@ function dinle() {
     yollar.forEach(yol => {
         FB.onValue(DR(yol), snap => {
             const v = snap.val();
-            if (yol === 'sayac') {
-                DATA.sayac = v || {};
-            } else if (yol === 'menyu') {
-                if (v && Object.keys(v).length) {
-                    MENYU = v;
-                    menyuYenile();
-                }
-            } else if (yol === 'stok') {
-                MENYU_STOK = v || {};
-                DATA.stok = MENYU_STOK;
-            } else {
-                DATA[yol] = v ? Object.values(v).filter(x => x && typeof x === 'object') : [];
-            }
+            if (yol === 'sayac') DATA.sayac = v || {};
+            else if (yol === 'menyu') { if (v && Object.keys(v).length) { MENYU = v; menyuYenile(); } }
+            else if (yol === 'stok') MENYU_STOK = v || {};
+            else DATA[yol] = v ? Object.values(v).filter(x => x && typeof x === 'object') : [];
             hazirSay++;
             if (hazirSay === yollar.length && !DATA.hazir) {
                 DATA.hazir = true;
@@ -193,9 +168,7 @@ function dinle() {
 
 async function ilkYukleme() {
     try {
-        if (!DATA.isciler.length) {
-            await FB.set(DR('isciler/1'), {id: 1, kod: '9999', ad: 'Admin', rol: 'admin'});
-        }
+        if (!DATA.isciler.length) await FB.set(DR('isciler/1'), {id: 1, kod: '9999', ad: 'Admin', rol: 'admin'});
         if (!DATA.masalar.length) {
             const masalar = {};
             for (let i = 1; i <= 12; i++) masalar[i] = {id: i, ad: 'Masa ' + i, nov: 'masa', status: 'bos'};
@@ -205,36 +178,33 @@ async function ilkYukleme() {
         if (!DATA.sayac || !DATA.sayac.sifaris) {
             await FB.set(DR('sayac'), {sifaris: 1, sessiya: 1, isci: 2, alis: 1, endirim: 1, paket: 1, selforder: 1});
         }
-        // İlk dəfə menyu və stok Firebasa yaz
-        if (!DATA.menyu) {
-            await FB.set(DR('menyu'), MENYU);
-        }
-        if (!DATA.stok) {
-            await FB.set(DR('stok'), {});
-        }
+        if (!Object.keys(MENYU).length) await FB.set(DR('menyu'), MENYU);
+        if (!Object.keys(MENYU_STOK).length) await FB.set(DR('stok'), {});
     } catch (e) {
-        console.error(e);
         toast('❌ Başlanğıc xətası: ' + e.message, 'error', 6000);
     }
 
-    // QR rejimi
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('qr') === '1') {
-        qrSecimEkrani();
-        return;
-    }
+    if (urlParams.get('qr') === '1') { qrSecimEkrani(); return; }
 
     const user = istifadeciAl();
     if (user) panelGoster(user.rol);
     else loginPage();
 }
 
+// Düzəliş 1: Status bildirişi YOX — yalnız manual yeniləmədə
 function ekranYenile() {
     const user = istifadeciAl();
     if (!user) return;
     if (user.rol === 'admin' && document.getElementById('ad-container')) {
+        // Səssiz yenilə — bildiriş yoxdur
         const aktivTab = document.querySelector('#ad-container .tabs .tab.active');
-        if (aktivTab) aktivTab.click();
+        if (aktivTab) {
+            const tabName = aktivTab.getAttribute('data-tab');
+            if (tabName === 'aktivlik') ad_aktivlikYukleSessiz();
+            else if (tabName === 'selforders') ad_selfOrdersYukleSessiz();
+            else if (tabName === 'hesabat') ad_hesabatYukleSessiz();
+        }
     } else if (user.rol === 'ofisiant' && document.getElementById('of-container')) {
         if (!OF.masaId) of_masaSecimCiz();
     } else if (user.rol === 'kassir' && document.getElementById('ka-container')) {
@@ -253,7 +223,7 @@ async function yeniId(ad) {
 }
 
 // ==================== KÖMƏKÇI ====================
-const kodDuzgundur = k => /^\d{4,}$/.test(k); // Düzəliş 9: min 4 rəqəm
+const kodDuzgundur = k => /^\d{4,}$/.test(k);
 const adDuzgundur = a => /^[A-Za-zƏəÖöÜüĞğİıŞşÇç\s]+$/.test(a);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const pad = n => String(n).padStart(2, '0');
@@ -277,7 +247,6 @@ function istifadeciAl() {
     } catch { return null; }
 }
 
-// ==================== HTML ====================
 function h(tag, attrs = {}, ...children) {
     const el = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs)) {
@@ -332,7 +301,7 @@ function timerBaslat() {
 
 let app;
 
-// ==================== LOGIN (Düzəliş 9) ====================
+// ==================== LOGIN ====================
 let kodDeyeri = '', kodGizli = true;
 let loginSehv = 0;
 let loginBlokVaxt = 0;
@@ -340,15 +309,7 @@ let loginBlokVaxt = 0;
 const GOZ_GIZLI = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
 const GOZ_ACIQ = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
 
-function reqemElave(r) { 
-    if (loginBlokVaxt > Date.now()) {
-        toast('⏳ Bloklanmısınız! Gözləyin...', 'error');
-        return;
-    }
-    if (kodDeyeri.length >= 10) return; 
-    kodDeyeri += r; 
-    kodYenile(); 
-}
+function reqemElave(r) { if (loginBlokVaxt > Date.now()) { toast('⏳ Bloklanmısınız!', 'error'); return; } if (kodDeyeri.length >= 10) return; kodDeyeri += r; kodYenile(); }
 function sonSil() { kodDeyeri = kodDeyeri.slice(0, -1); kodYenile(); }
 function koduTemizle() { kodDeyeri = ''; kodYenile(); }
 function kodYenile() {
@@ -363,48 +324,29 @@ function kodGosterGizlet() {
     if (i) i.innerHTML = kodGizli ? GOZ_GIZLI : GOZ_ACIQ;
     kodYenile();
 }
-
 function girisEt() {
     if (loginBlokVaxt > Date.now()) {
         const qalan = Math.ceil((loginBlokVaxt - Date.now()) / 1000);
-        toast(`⏳ Bloklanmısınız! ${qalan} saniyə gözləyin`, 'error');
+        toast(`⏳ Bloklanmısınız! ${qalan} saniyə`, 'error');
         return;
     }
-    
     const e = document.getElementById('err');
     if (!kodDeyeri) { if (e) e.textContent = '❌ Kod daxil edin!'; return; }
     const isci = DATA.isciler.find(i => i.kod === kodDeyeri);
-    
     if (!isci) {
         loginSehv++;
         kodDeyeri = ''; kodYenile();
-        
         if (loginSehv >= 3) {
-            loginBlokVaxt = Date.now() + 2 * 60 * 1000; // 2 dəqiqə blok
+            loginBlokVaxt = Date.now() + 2 * 60 * 1000;
             loginSehv = 0;
-            let saniyə = 120;
-            const blokMsg = document.createElement('p');
-            blokMsg.style.cssText = 'color:#ff6b6b;font-size:16px;font-weight:bold;text-align:center;margin-top:15px;';
-            blokMsg.id = 'blokMesaj';
-            if (e && e.parentElement) e.parentElement.insertBefore(blokMsg, e);
-            const timer = setInterval(() => {
-                saniyə--;
-                if (saniyə <= 0) { 
-                    clearInterval(timer); 
-                    const bm = document.getElementById('blokMesaj');
-                    if (bm) bm.remove();
-                }
-                else if (blokMsg) blokMsg.textContent = `⏳ Bloklanmısınız! ${saniyə} saniyə`;
-            }, 1000);
-            toast('⏳ 3 dəfə səhv! 2 dəqiqə bloklandınız.', 'error', 5000);
             if (e) e.textContent = '';
+            toast('⏳ 3 dəfə səhv! 2 dəqiqə bloklandınız.', 'error', 5000);
         } else {
             if (e) e.textContent = `❌ Kod yanlışdır! (${loginSehv}/3)`;
             toast('❌ Kod yanlışdır!', 'error');
         }
         return;
     }
-    
     loginSehv = 0;
     localStorage.setItem('resto_aktiv', JSON.stringify({id: isci.id, kod: isci.kod}));
     kodDeyeri = '';
@@ -413,7 +355,6 @@ function girisEt() {
     toast(`👋 ${salam}, ${isci.ad}!`, 'success');
     panelGoster(isci.rol);
 }
-
 function cixisEt() {
     confirmDialog('Çıxış etmək istəyirsiniz?', cavab => {
         if (!cavab) return;
@@ -434,8 +375,7 @@ function panelGoster(rol) {
 function loginPage() {
     app.innerHTML = '';
     const calc = h('div', {className: 'calc'});
-    ['1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach(n =>
-        calc.appendChild(h('button', {className: 'calc-btn', onclick: () => reqemElave(n)}, n)));
+    ['1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach(n => calc.appendChild(h('button', {className: 'calc-btn', onclick: () => reqemElave(n)}, n)));
     calc.appendChild(h('button', {className: 'calc-btn calc-temizle', onclick: koduTemizle}, 'C'));
     calc.appendChild(h('button', {className: 'calc-btn', onclick: () => reqemElave('0')}, '0'));
     calc.appendChild(h('button', {className: 'calc-btn calc-sil', onclick: sonSil}, '⌫'));
@@ -445,10 +385,7 @@ function loginPage() {
         h('p', {className: 'subtitle'}, 'Kodunuzu daxil edin'),
         h('div', {className: 'kod-display'},
             h('input', {type: 'text', id: 'kodInput', readonly: 'readonly', placeholder: '• • • •'}),
-            h('button', {
-                type: 'button', className: 'goz-btn', onclick: kodGosterGizlet,
-                innerHTML: '<svg id="gozIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' + GOZ_GIZLI + '</svg>'
-            })
+            h('button', {type: 'button', className: 'goz-btn', onclick: kodGosterGizlet, innerHTML: '<svg id="gozIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' + GOZ_GIZLI + '</svg>'})
         ),
         calc,
         h('button', {className: 'giris-btn', onclick: girisEt}, '🔓 Daxil ol'),
@@ -468,38 +405,27 @@ function makeHeader(title, ad, rol) {
     );
 }
 
-// ============================================================
-// ENDİRİM MODALI
-// ============================================================
+// ==================== ENDİRİM MODALI ====================
 function endirimModal(mebleg, callback) {
     const kohne = document.getElementById('endirimModal');
     if (kohne) kohne.remove();
-
     const faizInput = h('input', {type: 'number', placeholder: 'Endirim %', min: '0', max: '100', step: '1', value: '0'});
     const adInput = h('input', {type: 'text', placeholder: 'Müştəri adı (istəyə bağlı)'});
     const netice = h('div', {style: 'text-align:center;margin:15px 0;'});
-
     const faizAl = () => Math.min(100, Math.max(0, parseFloat(faizInput.value) || 0));
     const hesabla = () => {
         const faiz = faizAl(), endirim = mebleg * faiz / 100, yekun = mebleg - endirim;
-        netice.innerHTML =
-            `<div style="font-size:14px;color:#aaa;margin-bottom:5px;">Əvvəlki: ${pul(mebleg)}</div>` +
+        netice.innerHTML = `<div style="font-size:14px;color:#aaa;margin-bottom:5px;">Əvvəlki: ${pul(mebleg)}</div>` +
             `<div style="font-size:14px;color:#e94560;margin-bottom:5px;">Endirim (${faiz}%): -${pul(endirim)}</div>` +
             `<div style="font-size:26px;font-weight:bold;color:#2ecc71;">Yekun: ${pul(yekun)}</div>`;
     };
     faizInput.oninput = hesabla;
-
     const modal = h('div', {className: 'modal-overlay', id: 'endirimModal'},
         h('div', {className: 'modal-cek'},
             h('h3', {style: 'text-align:center;margin-bottom:15px;color:#e94560;'}, '💰 Endirim Tətbiq Et'),
             h('div', {style: 'display:flex;flex-direction:column;gap:10px;'},
                 faizInput, adInput, netice,
-                h('button', {className: 's-btn b-tamam', onclick: () => {
-                    const faiz = faizAl(), endirim = mebleg * faiz / 100;
-                    const data = {faiz, ad: adInput.value.trim(), endirim, yekun: mebleg - endirim, evvelki: mebleg};
-                    modal.remove();
-                    callback(data);
-                }}, '✅ Təsdiqlə'),
+                h('button', {className: 's-btn b-tamam', onclick: () => { const faiz = faizAl(), endirim = mebleg * faiz / 100; const data = {faiz, ad: adInput.value.trim(), endirim, yekun: mebleg - endirim, evvelki: mebleg}; modal.remove(); callback(data); }}, '✅ Təsdiqlə'),
                 h('button', {className: 's-btn b-geri', onclick: () => { modal.remove(); callback(null); }}, '← Ləğv et')
             )
         )
@@ -509,9 +435,7 @@ function endirimModal(mebleg, callback) {
     hesabla();
 }
 
-// ============================================================
-// ÇEK (Düzəliş 3: ayrı funksiya)
-// ============================================================
+// ==================== ÇEK ====================
 function cekStilYukle() {
     if (document.getElementById('cekStil')) return;
     const st = document.createElement('style');
@@ -527,32 +451,15 @@ function cekStilYukle() {
 #cekModal .cek-qrup{font-weight:bold;text-decoration:underline;margin:6px 0 2px;color:#000!important;}
 #cekModal .cek-toplam{font-weight:bold;font-size:15px;border-top:1px solid #000;margin-top:4px;padding-top:4px}
 #cekModal .cek-tesekkur{text-align:center;margin:6px 0 0;font-size:12px}
-@media print{
-  body.cek-print{background:#fff!important}
-  body.cek-print > *:not(#cekModal){display:none!important}
-  body.cek-print #cekModal{position:static!important;display:block!important;background:#fff!important;padding:0!important}
-  body.cek-print #cekModal .modal-cek{background:#fff!important;box-shadow:none!important;border:none!important;padding:0!important;max-width:none!important}
-  body.cek-print #cekModal .cek-btnler{display:none!important}
-}`;
+@media print{body.cek-print{background:#fff!important}body.cek-print > *:not(#cekModal){display:none!important}body.cek-print #cekModal{position:static!important;display:block!important;background:#fff!important;padding:0!important}body.cek-print #cekModal .modal-cek{background:#fff!important;box-shadow:none!important;border:none!important;padding:0!important;max-width:none!important}body.cek-print #cekModal .cek-btnler{display:none!important}}`;
     document.head.appendChild(st);
 }
-
-function cekBagla() {
-    const m = document.getElementById('cekModal');
-    if (m) m.remove();
-    document.body.classList.remove('cek-print');
-}
-
-function cekCapEt() {
-    document.body.classList.add('cek-print');
-    window.addEventListener('afterprint', () => document.body.classList.remove('cek-print'), {once: true});
-    setTimeout(() => window.print(), 300);
-}
+function cekBagla() { const m = document.getElementById('cekModal'); if (m) m.remove(); document.body.classList.remove('cek-print'); }
+function cekCapEt() { document.body.classList.add('cek-print'); window.addEventListener('afterprint', () => document.body.classList.remove('cek-print'), {once: true}); setTimeout(() => window.print(), 300); }
 
 function cekGoster(sifarisler, basliq, meta, toplam, ed) {
     cekStilYukle();
     cekBagla();
-
     const satir = (a, b, ekstra = '') => `<div class="cek-satir ${ekstra}"><span>${a}</span><span>${b}</span></div>`;
     let html = `<div class="cek-basliq"><h2>RESTORAN</h2><p class="cek-tarix">${esc(new Date().toLocaleString('az-AZ'))}</p></div><div class="cek-xett"></div>`;
     html += satir('Başlıq:', `<b>${esc(basliq)}</b>`);
@@ -563,30 +470,20 @@ function cekGoster(sifarisler, basliq, meta, toplam, ed) {
         if (meta.isci_ad) html += satir('İşçi:', `<b>${esc(meta.isci_ad)}</b>`);
     }
     html += '<div class="cek-xett"></div>';
-
-    const setir = s => {
-        const ad = s.mehsul_ad || s.ad;
-        const m = s.mebleg != null ? s.mebleg : s.q * s.miqdar;
-        return satir(`${esc(ad)} x${s.miqdar}`, pul(m));
-    };
+    const setir = s => { const ad = s.mehsul_ad || s.ad; const m = s.mebleg != null ? s.mebleg : s.q * s.miqdar; return satir(`${esc(ad)} x${s.miqdar}`, pul(m)); };
     if (meta && meta.qrupla) {
         const ick = s => ICKILER.includes(MEHSUL_KAT[s.mehsul_ad || s.ad]);
         const yem = sifarisler.filter(s => !ick(s)), icl = sifarisler.filter(ick);
         if (yem.length) html += '<div class="cek-qrup">YEMEKLER</div>' + yem.map(setir).join('');
         if (icl.length) html += '<div class="cek-qrup">ICKILER</div>' + icl.map(setir).join('');
-    } else {
-        html += sifarisler.map(setir).join('');
-    }
+    } else html += sifarisler.map(setir).join('');
     html += '<div class="cek-xett"></div>';
     if (ed && ed.faiz > 0) {
         html += satir('Əvvəlki:', pul(ed.evvelki));
         html += satir(`Endirim (${ed.faiz}%):`, '-' + pul(ed.endirim));
         html += satir('YEKUN:', pul(ed.yekun), 'cek-toplam');
-    } else {
-        html += satir('TOPLAM:', pul(toplam), 'cek-toplam');
-    }
+    } else html += satir('TOPLAM:', pul(toplam), 'cek-toplam');
     html += '<div class="cek-xett"></div><p class="cek-tesekkur">Təşəkkür edirik!</p>';
-
     const modal = h('div', {className: 'modal-overlay', id: 'cekModal'},
         h('div', {className: 'modal-cek'},
             h('div', {className: 'cek-ic', innerHTML: html}),
@@ -604,19 +501,11 @@ function sessiyaCeki(sId, basliq) {
     const sif = DATA.sifarisler.filter(x => x.sessiya_id === sId);
     if (!sif.length) { toast('Sifariş yoxdur!', 'warning'); return; }
     const toplam = cem(sif, x => x.mebleg);
-    const ed = s.endirim_mebleg > 0 ? {
-        faiz: Math.round(s.endirim_mebleg / s.mebleg * 1000) / 10,
-        evvelki: s.mebleg, endirim: s.endirim_mebleg, yekun: s.yekun, ad: s.endirim_ad
-    } : null;
-    cekGoster(sif, basliq, {
-        musteri_ad: s.tip === 'paket' ? s.musteri_ad : '', musteri_tel: s.musteri_tel,
-        unvan: s.unvan, isci_ad: s.isci_ad, qrupla: s.tip === 'paket'
-    }, toplam, ed);
+    const ed = s.endirim_mebleg > 0 ? {faiz: Math.round(s.endirim_mebleg / s.mebleg * 1000) / 10, evvelki: s.mebleg, endirim: s.endirim_mebleg, yekun: s.yekun, ad: s.endirim_ad} : null;
+    cekGoster(sif, basliq, {musteri_ad: s.tip === 'paket' ? s.musteri_ad : '', musteri_tel: s.musteri_tel, unvan: s.unvan, isci_ad: s.isci_ad, qrupla: s.tip === 'paket'}, toplam, ed);
 }
 
-// ============================================================
-// SESSİYA / SİFARİŞ
-// ============================================================
+// ==================== SESSİYA ====================
 function aktivSessiya(masaId) {
     return DATA.sessiyalar.find(x => x.masa_id === masaId && x.status === 'aktiv' && x.tip === 'masa') || null;
 }
@@ -654,19 +543,11 @@ async function sifarisElave(sessiyaId, masaId, masaAd, sebet) {
 async function sessiyaBagla(id, odenisNovu) {
     const s = DATA.sessiyalar.find(x => x.id === id);
     if (!s) return;
-    await FB.update(DR('sessiyalar/' + id), {
-        status: 'bitdi', 
-        bitme: new Date().toISOString(),
-        odenis_novu: odenisNovu || 'nagd'
-    });
-    if (s.masa_id) {
-        await FB.update(DR('masalar/' + s.masa_id), {status: 'bos'});
-    }
+    await FB.update(DR('sessiyalar/' + id), {status: 'bitdi', bitme: new Date().toISOString(), odenis_novu: odenisNovu || 'nagd'});
+    if (s.masa_id) await FB.update(DR('masalar/' + s.masa_id), {status: 'bos'});
 }
 
-// ============================================================
-// MENYU + SƏBƏT
-// ============================================================
+// ==================== MENYU + SƏBƏT ====================
 function sebetPanel(S) {
     return h('div', {className: 'sebet'},
         h('h3', {}, '🛒 ' + (S.sebetBasliq || 'Səbət')),
@@ -675,15 +556,13 @@ function sebetPanel(S) {
     );
 }
 
+// Düzəliş 6: Səbət düzgün — mehsul varsa göstər
 function sebetYenile(S) {
     const el = document.getElementById(S.p + '-sebetItems');
     if (!el) return;
     el.innerHTML = '';
 
-    const movcudSifarisler = S.sessiya
-        ? DATA.sifarisler.filter(x => x.sessiya_id === S.sessiya.id)
-        : [];
-
+    const movcudSifarisler = S.sessiya ? DATA.sifarisler.filter(x => x.sessiya_id === S.sessiya.id) : [];
     const birlesdirilmis = {};
     movcudSifarisler.forEach(s => {
         if (!birlesdirilmis[s.mehsul_ad]) birlesdirilmis[s.mehsul_ad] = {ad: s.mehsul_ad, q: s.qiymet, miqdar: 0, kohne: 0};
@@ -696,6 +575,8 @@ function sebetYenile(S) {
     });
 
     const siyahi = Object.values(birlesdirilmis);
+    
+    // Düzəliş: Səbət boşdursa
     if (!siyahi.length) {
         el.appendChild(h('p', {style: 'color:#aaa;text-align:center;padding:20px;'}, 'Səbət boşdur'));
     }
@@ -792,20 +673,17 @@ function katEkrani(S, grup) {
         Object.entries(MENYU[k]).forEach(([ad, q]) => {
             const stokdaYox = MENYU_STOK[ad] === true;
             const mehsul = h('div', {
-                className: 'mehsul', 
-                style: tam ? `border-left:5px solid ${renk};` + (stokdaYox ? 'opacity:0.4;cursor:not-allowed;' : '') : (stokdaYox ? 'opacity:0.4;cursor:not-allowed;' : ''),
+                className: 'mehsul' + (stokdaYox ? ' stokda-yox' : ''),
+                style: tam ? `border-left:5px solid ${renk};` : '',
                 onclick: () => {
-                    if (stokdaYox) {
-                        toast('❌ Bu məhsul stokda yoxdur!', 'error');
-                        return;
-                    }
+                    if (stokdaYox) { toast('❌ Bu məhsul stokda yoxdur!', 'error'); return; }
                     const m = S.sebet.find(x => x.ad === ad);
                     if (m) m.miqdar++; else S.sebet.push({ad, q, miqdar: 1});
                     sebetYenile(S);
                     toast(`✅ ${ad} əlavə edildi`, 'success', 1500);
                 }
             }, 
-                h('div', {className: 'ad'}, ad + (stokdaYox ? ' ❌' : '')), 
+                h('div', {className: 'ad'}, ad), 
                 h('div', {className: 'q'}, pul(q))
             );
             mehsEl.appendChild(mehsul);
@@ -829,14 +707,16 @@ function katEkrani(S, grup) {
     sebetYenile(S);
 }
 
-// ============================================================
-// SİFARİŞ TAMAMLA (Düzəliş 3: çek ayrı, masa bağlama kassirdə)
-// ============================================================
+// Düzəliş 5: Dolu masa yoxlaması
+function masaDoludur(masaId) {
+    const s = aktivSessiya(masaId);
+    if (s) return true;
+    // SelfOrder-da aktiv varsa
+    return DATA.selfOrders.some(so => so.masa_id === masaId && (so.status === 'gozlemede' || so.status === 'qebul' || so.status === 'hazirlanir' || so.status === 'hazir'));
+}
+
 function sifarisTamamla(S, cek) {
-    if (!S.sebet.length) {
-        toast('Səbət boşdur!', 'warning');
-        return;
-    }
+    if (!S.sebet.length) { toast('Səbət boşdur!', 'warning'); return; }
     const toplam = cem(S.sebet, x => x.q * x.miqdar);
 
     endirimModal(toplam, async ed => {
@@ -854,16 +734,12 @@ function sifarisTamamla(S, cek) {
             const yeniYekun = (s.yekun || 0) + ed.yekun;
             const yeniEndirim = (s.endirim_mebleg || 0) + ed.endirim;
             await FB.update(DR('sessiyalar/' + s0.id), {
-                mebleg: yeniMebleg,
-                yekun: yeniYekun,
-                endirim_mebleg: yeniEndirim,
+                mebleg: yeniMebleg, yekun: yeniYekun, endirim_mebleg: yeniEndirim,
                 endirim_faiz: yeniMebleg ? Math.round(yeniEndirim / yeniMebleg * 1000) / 10 : 0,
                 endirim_ad: ed.ad || s.endirim_ad || ''
             });
 
-            if (S.masaId) {
-                await FB.update(DR('masalar/' + S.masaId), {status: 'dolu'});
-            }
+            if (S.masaId) await FB.update(DR('masalar/' + S.masaId), {status: 'dolu'});
 
             if (ed.faiz > 0) {
                 const eid = await yeniId('endirim');
@@ -879,21 +755,15 @@ function sifarisTamamla(S, cek) {
             S.sebet = [];
             toast('✅ Sifariş göndərildi! Yekun: ' + pul(ed.yekun), 'success');
             
-            if (cek) {
-                // Sifarişdən dərhal sonra çek çap et (masa bağlanmır)
-                sessiyaCeki(s0.id, S.masaAd || 'Paket #' + s0.paket_nomre);
-            }
+            if (cek) sessiyaCeki(s0.id, S.masaAd || 'Paket #' + s0.paket_nomre);
             S.geri();
         } catch (err) {
-            console.error(err);
             toast('❌ Sifariş xətası: ' + err.message, 'error', 5000);
         }
     });
 }
 
-// ============================================================
-// OFİSİANT
-// ============================================================
+// ==================== OFİSİANT ====================
 const OF = {
     p: 'of', cont: 'of-container', masaId: null, masaAd: '', sessiya: null, sebet: [],
     geri: () => of_masaSecimCiz(),
@@ -941,25 +811,30 @@ function of_masaSecimCiz() {
 
     masaKartlari(c, 'of', m => {
         const s = sessiyalar.find(x => x.masa_id === m.id && x.status === 'aktiv' && x.tip === 'masa');
+        const selfOrder = DATA.selfOrders.find(so => so.masa_id === m.id && ['gozlemede', 'qebul', 'hazirlanir', 'hazir'].includes(so.status));
         const basqa = s && s.isci_id !== user.id;
         const ozum = s && s.isci_id === user.id;
 
         let klass = 'masa', st = '🟢 Boş', stil = '';
-        if (s) { 
-            klass += ' dolu'; st = '🔴 Dolu'; 
-            // Düzəliş 3: Çek çap olunubsa mavi
-            if (s.odenis_novu) { klass += ' cek-cap'; st = '🔵 Çek çap olunub'; }
+        if (s || selfOrder) {
+            klass += ' dolu'; 
+            st = selfOrder ? '📱 QR Sifariş' : '🔴 Dolu';
+            if (s && s.odenis_novu) { klass += ' cek-cap'; st = '🔵 Çek çap olunub'; }
         }
         if (ozum) { klass += ' ozum'; st = '👤 Sizin'; }
         if (basqa) { klass += ' bagli'; st = '🔒 Bağlı'; stil = 'opacity:.45;cursor:not-allowed;filter:grayscale(.6);'; }
+        // Düzəliş 5: Dolu masa — sifariş verilə bilməz
+        if (selfOrder && !s) { klass += ' bagli'; st = '📱 QR — Dolu'; stil = 'opacity:.6;cursor:not-allowed;'; }
 
         const div = h('div', {className: klass, style: stil}, h('div', {className: 'ad'}, m.ad), h('div', {className: 'st'}, st));
         if (s) {
             div.appendChild(h('div', {className: 'isci-ad'}, '👤 ' + s.isci_ad));
-            div.appendChild(h('div', {className: 'masa-timer'}, h('span', {}, '⏱️'),
-                h('span', {className: 'timer-saat', 'data-baslama': s.baslama}, '00:00:00')));
+            div.appendChild(h('div', {className: 'masa-timer'}, h('span', {}, '⏱️'), h('span', {className: 'timer-saat', 'data-baslama': s.baslama}, '00:00:00')));
+        } else if (selfOrder) {
+            div.appendChild(h('div', {className: 'isci-ad'}, '📱 QR Self-Order'));
         }
         div.addEventListener('click', () => {
+            if (selfOrder && !s) { toast('❌ Bu masa QR sifarişi ilə dolu!', 'error'); return; }
             if (basqa) { toast('🔒 Bu masa ' + s.isci_ad + ' tərəfindən açılıb!', 'error'); return; }
             of_masaSec(m.id);
         });
@@ -975,18 +850,13 @@ function of_masaSec(id) {
     esasMenyu(OF);
 }
 
-// ============================================================
-// PAKETÇİ (Düzəliş 6: Ödənildi düyməsi)
-// ============================================================
+// ==================== PAKETÇİ ====================
 const PK = {
     p: 'pk', cont: 'pk-container', tamKat: true, masaId: null, masaAd: 'Paket', sessiya: null, sebet: [],
     sebetBasliq: 'Paket Səbəti', geriYazi: '← Paketlərə qayıt',
     geri: () => pk_render(),
     ekran: () => katEkrani(PK, null),
-    meta: () => ({
-        musteri_ad: PK.sessiya.musteri_ad, musteri_tel: PK.sessiya.musteri_tel,
-        unvan: PK.sessiya.unvan, isci_ad: PK.sessiya.isci_ad
-    }),
+    meta: () => ({musteri_ad: PK.sessiya.musteri_ad, musteri_tel: PK.sessiya.musteri_tel, unvan: PK.sessiya.unvan, isci_ad: PK.sessiya.isci_ad}),
     hazirla: async () => {
         const s = PK.sessiya && DATA.sessiyalar.find(x => x.id === PK.sessiya.id);
         if (!s || s.status !== 'aktiv') { toast('❌ Bu paket artıq bağlıdır!', 'error'); pk_render(); return null; }
@@ -1019,10 +889,7 @@ function pk_render() {
         h('h3', {className: 's-title'}, '📦 Paket Sifarişləri'),
         h('button', {className: 'btn-geri-ust', onclick: pk_yeniPaket}, '➕ Yeni Paket')
     ));
-    if (!paketler.length) {
-        c.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:40px;'}, '📦 Paket yoxdur'));
-        return;
-    }
+    if (!paketler.length) { c.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:40px;'}, '📦 Paket yoxdur')); return; }
 
     paketler.slice().sort((a, b) => b.id - a.id).forEach(p => {
         const sif = DATA.sifarisler.filter(x => x.sessiya_id === p.id);
@@ -1031,8 +898,7 @@ function pk_render() {
 
         const siyahi = h('div', {style: 'margin-top:15px;padding:15px;background:rgba(0,0,0,0.3);border-radius:10px;'},
             h('h4', {style: 'color:#f39c12;margin-bottom:10px;'}, '📋 Sifarişlər'),
-            !sif.length
-                ? h('p', {style: 'color:#aaa;font-size:13px;'}, 'Sifariş yoxdur')
+            !sif.length ? h('p', {style: 'color:#aaa;font-size:13px;'}, 'Sifariş yoxdur')
                 : h('table', {style: 'width:100%;'},
                     h('thead', {}, h('tr', {}, h('th', {}, 'Məhsul'), h('th', {}, 'Miqdar'), h('th', {}, 'Qiymət'), h('th', {}, 'Məbləğ'))),
                     h('tbody', {}, ...sif.map(x => h('tr', {},
@@ -1042,10 +908,8 @@ function pk_render() {
 
         let btnler;
         if (aktiv) {
-            const odenisBtn = !odenilib 
-                ? h('button', {className: 'small-btn', style: 'background:#f39c12;', onclick: () => pk_odenis(p.id)}, '💰 Ödənildi')
+            const odenisBtn = !odenilib ? h('button', {className: 'small-btn', style: 'background:#f39c12;', onclick: () => pk_odenis(p.id)}, '💰 Ödənildi')
                 : h('span', {style: 'color:#2ecc71; font-weight:bold;'}, `✅ Ödənilib (${p.odenis_novu === 'kart' ? '💳 Kart' : '💵 Nağd'})`);
-            
             btnler = h('div', {className: 'aktiv-masa-btnler'},
                 h('button', {className: 'small-btn', style: 'background:#3498db;', onclick: () => pk_menyuAc(p.id)}, '🍽️ Sifarişə davam et'),
                 odenisBtn,
@@ -1075,11 +939,9 @@ async function pk_odenis(id) {
         if (!növ) return;
         try {
             await sessiyaBagla(id, növ);
-            toast('✅ Ödəniş qəbul edildi: ' + (növ === 'kart' ? '💳 Kart' : '💵 Nağd'), 'success');
+            toast('✅ Ödəniş: ' + (növ === 'kart' ? '💳 Kart' : '💵 Nağd'), 'success');
             if (PK.sessiya && PK.sessiya.id === id) { PK.sessiya = null; PK.sebet = []; }
-        } catch (err) {
-            toast('❌ Xəta: ' + err.message, 'error', 5000);
-        }
+        } catch (err) { toast('❌ Xəta: ' + err.message, 'error', 5000); }
         pk_render();
     });
 }
@@ -1087,81 +949,47 @@ async function pk_odenis(id) {
 async function pk_yeniPaket() {
     const kohne = document.getElementById('yeniPaketModal');
     if (kohne) kohne.remove();
-
     const modal = h('div', {className: 'modal-overlay', id: 'yeniPaketModal'},
         h('div', {className: 'modal-cek', style: 'max-width: 420px;'},
-            h('h3', {style: 'text-align:center; margin-bottom:20px; color:#f39c12; font-size:20px;'}, '📦 Yeni Paket Sifarişi'),
+            h('h3', {style: 'text-align:center; margin-bottom:20px; color:#f39c12; font-size:20px;'}, '📦 Yeni Paket'),
             h('div', {style: 'display:flex; flex-direction:column; gap:14px;'},
-                h('div', {},
-                    h('label', {style: 'display:block; font-size:13px; color:#aaa; margin-bottom:5px; font-weight:600;'}, '👤 Müştəri adı *'),
-                    h('input', {
-                        type: 'text', id: 'pk-ad', placeholder: 'Məsələn: Əli Məmmədov',
-                        style: 'width:100%; padding:12px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.4); background:#ffffff; color:#000; font-size:15px; outline:none;'
-                    })
-                ),
-                h('div', {},
-                    h('label', {style: 'display:block; font-size:13px; color:#aaa; margin-bottom:5px; font-weight:600;'}, '📞 Telefon *'),
-                    h('input', {
-                        type: 'tel', id: 'pk-tel', placeholder: 'Məsələn: 0501234567',
-                        style: 'width:100%; padding:12px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.4); background:#ffffff; color:#000; font-size:15px; outline:none;'
-                    })
-                ),
-                h('div', {},
-                    h('label', {style: 'display:block; font-size:13px; color:#aaa; margin-bottom:5px; font-weight:600;'}, '📍 Ünvan *'),
-                    h('input', {
-                        type: 'text', id: 'pk-unvan', placeholder: 'Məsələn: Nizami küç. 15, mənzil 8',
-                        style: 'width:100%; padding:12px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.4); background:#ffffff; color:#000; font-size:15px; outline:none;'
-                    })
-                ),
+                h('div', {}, h('label', {style: 'display:block; font-size:13px; color:#aaa; margin-bottom:5px; font-weight:600;'}, '👤 Müştəri adı *'),
+                    h('input', {type: 'text', id: 'pk-ad', placeholder: 'Məsələn: Əli Məmmədov', style: 'width:100%; padding:12px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.4); background:#ffffff; color:#000; font-size:15px; outline:none;'})),
+                h('div', {}, h('label', {style: 'display:block; font-size:13px; color:#aaa; margin-bottom:5px; font-weight:600;'}, '📞 Telefon *'),
+                    h('input', {type: 'tel', id: 'pk-tel', placeholder: 'Məsələn: 0501234567', style: 'width:100%; padding:12px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.4); background:#ffffff; color:#000; font-size:15px; outline:none;'})),
+                h('div', {}, h('label', {style: 'display:block; font-size:13px; color:#aaa; margin-bottom:5px; font-weight:600;'}, '📍 Ünvan *'),
+                    h('input', {type: 'text', id: 'pk-unvan', placeholder: 'Məsələn: Nizami küç. 15', style: 'width:100%; padding:12px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.4); background:#ffffff; color:#000; font-size:15px; outline:none;'})),
                 h('p', {style: 'font-size:11px; color:#888; margin:0;'}, '* - Bütün sahələr məcburidir'),
-                h('button', {
-                    className: 's-btn b-tamam',
-                    onclick: async () => {
-                        const ad = document.getElementById('pk-ad').value.trim();
-                        const tel = document.getElementById('pk-tel').value.trim();
-                        const unvan = document.getElementById('pk-unvan').value.trim();
-                        
-                        if (!ad) { toast('❌ Müştəri adı lazımdır!', 'error'); document.getElementById('pk-ad').focus(); return; }
-                        if (!tel) { toast('❌ Telefon nömrəsi lazımdır!', 'error'); document.getElementById('pk-tel').focus(); return; }
-                        if (!unvan) { toast('❌ Ünvan lazımdır!', 'error'); document.getElementById('pk-unvan').focus(); return; }
-                        
-                        modal.remove();
-                        try {
-                            const s = await sessiyaYarat(null, 'Paket', 'paket', {musteri_ad: ad, musteri_tel: tel, unvan});
-                            toast('✅ Paket yaradıldı: #' + s.paket_nomre, 'success');
-                            setTimeout(() => pk_menyuAc(s.id), 300);
-                        } catch (err) {
-                            toast('❌ Xəta: ' + err.message, 'error', 5000);
-                        }
-                    }
-                }, '✅ Paketi Yarat'),
-                h('button', {
-                    className: 's-btn b-geri',
-                    onclick: () => modal.remove()
-                }, '← Ləğv et')
+                h('button', {className: 's-btn b-tamam', onclick: async () => {
+                    const ad = document.getElementById('pk-ad').value.trim();
+                    const tel = document.getElementById('pk-tel').value.trim();
+                    const unvan = document.getElementById('pk-unvan').value.trim();
+                    if (!ad) { toast('❌ Ad lazımdır!', 'error'); return; }
+                    if (!tel) { toast('❌ Telefon lazımdır!', 'error'); return; }
+                    if (!unvan) { toast('❌ Ünvan lazımdır!', 'error'); return; }
+                    modal.remove();
+                    try {
+                        const s = await sessiyaYarat(null, 'Paket', 'paket', {musteri_ad: ad, musteri_tel: tel, unvan});
+                        toast('✅ Paket yaradıldı: #' + s.paket_nomre, 'success');
+                        setTimeout(() => pk_menyuAc(s.id), 300);
+                    } catch (err) { toast('❌ Xəta: ' + err.message, 'error', 5000); }
+                }}, '✅ Paketi Yarat'),
+                h('button', {className: 's-btn b-geri', onclick: () => modal.remove()}, '← Ləğv et')
             )
         )
     );
     document.body.appendChild(modal);
     modal.style.display = 'flex';
-    setTimeout(() => document.getElementById('pk-ad')?.focus(), 100);
-    modal.addEventListener('keydown', e => {
-        if (e.key === 'Enter') { e.preventDefault(); modal.querySelector('.s-btn.b-tamam').click(); }
-        if (e.key === 'Escape') modal.remove();
-    });
 }
 
 function pk_menyuAc(id) {
     const s = DATA.sessiyalar.find(x => x.id === id);
-    if (!s || s.status !== 'aktiv') { toast('❌ Paket tapılmadı və ya bağlıdır!', 'error'); pk_render(); return; }
-    PK.sessiya = s;
-    PK.sebet = [];
+    if (!s || s.status !== 'aktiv') { toast('❌ Paket tapılmadı!', 'error'); pk_render(); return; }
+    PK.sessiya = s; PK.sebet = [];
     katEkrani(PK, null);
 }
 
-// ============================================================
-// KASSİR (Düzəliş 3: masa bağlama)
-// ============================================================
+// ==================== KASSİR ====================
 const KA = {
     p: 'ka', cont: 'ka-p-masalar', masaId: null, masaAd: '', sessiya: null, sebet: [],
     geri: () => ka_renderMasalar(),
@@ -1181,23 +1009,27 @@ function ka_render() {
     const c = document.getElementById('ka-container');
     c.innerHTML = '';
     c.appendChild(h('div', {className: 'tabs'},
-        h('button', {className: 'tab active', onclick: e => ka_tabSec('masalar', e.target)}, '🍽️ Masalar'),
-        h('button', {className: 'tab', onclick: e => ka_tabSec('paketler', e.target)}, '📦 Paketlər'),
-        h('button', {className: 'tab', onclick: e => ka_tabSec('alislar', e.target)}, '🛒 Alışlar')
+        h('button', {className: 'tab active', 'data-tab': 'masalar', onclick: e => ka_tabSec('masalar', e.target)}, '🍽️ Masalar'),
+        h('button', {className: 'tab', 'data-tab': 'paketler', onclick: e => ka_tabSec('paketler', e.target)}, '📦 Paketlər'),
+        h('button', {className: 'tab', 'data-tab': 'selforders', onclick: e => ka_tabSec('selforders', e.target)}, '📱 QR Sifarişlər'),
+        h('button', {className: 'tab', 'data-tab': 'alislar', onclick: e => ka_tabSec('alislar', e.target)}, '🛒 Alışlar')
     ));
     c.appendChild(h('div', {className: 'panel active', id: 'ka-p-masalar'}));
     c.appendChild(h('div', {className: 'panel', id: 'ka-p-paketler'}));
+    c.appendChild(h('div', {className: 'panel', id: 'ka-p-selforders'}));
     c.appendChild(h('div', {className: 'panel', id: 'ka-p-alislar'}));
     ka_renderMasalar();
     paketCedveli('ka-p-paketler');
+    ka_renderSelfOrders();
     ka_renderAlislar();
 }
 
 function ka_tabSec(tab, btn) {
     document.querySelectorAll('#ka-container .tabs .tab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    ['masalar', 'paketler', 'alislar'].forEach(t => document.getElementById('ka-p-' + t).classList.toggle('active', t === tab));
+    ['masalar', 'paketler', 'selforders', 'alislar'].forEach(t => document.getElementById('ka-p-' + t).classList.toggle('active', t === tab));
     if (tab === 'paketler') paketCedveli('ka-p-paketler');
+    if (tab === 'selforders') ka_renderSelfOrders();
 }
 
 function ka_renderMasalar() {
@@ -1209,19 +1041,25 @@ function ka_renderMasalar() {
 
     masaKartlari(c, 'ka', m => {
         const s = DATA.sessiyalar.find(x => x.masa_id === m.id && x.status === 'aktiv' && x.tip === 'masa');
+        const selfOrder = DATA.selfOrders.find(so => so.masa_id === m.id && ['gozlemede', 'qebul', 'hazirlanir', 'hazir'].includes(so.status));
         let klass = 'masa', st = '🟢 Boş';
-        if (s) { 
-            klass += ' dolu'; st = '🔴 Dolu'; 
-            if (s.odenis_novu) { klass += ' cek-cap'; st = '🔵 Çek çap olunub'; }
+        if (s || selfOrder) {
+            klass += ' dolu';
+            st = selfOrder && !s ? '📱 QR Sifariş' : '🔴 Dolu';
+            if (s && s.odenis_novu) { klass += ' cek-cap'; st = '🔵 Çek çap olunub'; }
         }
         if (s && s.isci_id === user.id) { klass += ' ozum'; st = '👤 Sizin'; }
         const div = h('div', {className: klass}, h('div', {className: 'ad'}, m.ad), h('div', {className: 'st'}, st));
         if (s) {
             div.appendChild(h('div', {className: 'isci-ad'}, '👤 ' + s.isci_ad));
-            div.appendChild(h('div', {className: 'masa-timer'}, h('span', {}, '⏱️'),
-                h('span', {className: 'timer-saat', 'data-baslama': s.baslama}, '00:00:00')));
+            div.appendChild(h('div', {className: 'masa-timer'}, h('span', {}, '⏱️'), h('span', {className: 'timer-saat', 'data-baslama': s.baslama}, '00:00:00')));
+        } else if (selfOrder) {
+            div.appendChild(h('div', {className: 'isci-ad'}, '📱 QR Self-Order'));
         }
-        div.addEventListener('click', () => ka_masaSec(m.id));
+        div.addEventListener('click', () => {
+            if (selfOrder && !s) { toast('❌ Bu masa QR sifarişi ilə dolu!', 'error'); return; }
+            ka_masaSec(m.id);
+        });
         return div;
     });
 }
@@ -1239,21 +1077,79 @@ function paketCedveli(id) {
     c.appendChild(h('h3', {className: 's-title'}, '📦 Bütün Paket Sifarişləri'));
     const paketler = DATA.sessiyalar.filter(s => s.tip === 'paket');
     const tbody = h('tbody', {});
-    if (!paketler.length) {
-        tbody.appendChild(h('tr', {}, h('td', {colspan: '9', style: 'text-align:center;color:#aaa;padding:20px;'}, 'Paket yoxdur')));
-    }
+    if (!paketler.length) tbody.appendChild(h('tr', {}, h('td', {colspan: '9', style: 'text-align:center;color:#aaa;padding:20px;'}, 'Paket yoxdur')));
     paketler.slice().sort((a, b) => b.id - a.id).forEach(p => tbody.appendChild(h('tr', {},
         h('td', {}, h('b', {style: 'color:#f39c12;'}, '#' + p.paket_nomre)),
         h('td', {}, p.musteri_ad || '-'), h('td', {}, p.musteri_tel || '-'), h('td', {}, p.unvan || '-'), h('td', {}, p.isci_ad),
         h('td', {style: 'color:#2ecc71;font-weight:bold;'}, pul(p.yekun)),
-        h('td', {style: p.endirim_mebleg > 0 ? 'color:#e94560;' : ''},
-            p.endirim_mebleg > 0 ? `-${p.endirim_faiz}% (${p.endirim_ad || '-'})` : '-'),
+        h('td', {style: p.endirim_mebleg > 0 ? 'color:#e94560;' : ''}, p.endirim_mebleg > 0 ? `-${p.endirim_faiz}%` : '-'),
         h('td', {}, p.status === 'aktiv' ? '🟡 Aktiv' : '🟢 Bağlı'),
         h('td', {}, tarixFormat(p.baslama))
     )));
     c.appendChild(h('table', {},
         h('thead', {}, h('tr', {}, ...['Nömrə', 'Müştəri', 'Telefon', 'Ünvan', 'İşçi', 'Məbləğ', 'Endirim', 'Status', 'Tarix'].map(t => h('th', {}, t)))),
         tbody));
+}
+
+// Düzəliş 4: Kassir üçün QR Sifarişlər paneli
+function ka_renderSelfOrders() {
+    const c = document.getElementById('ka-p-selforders');
+    if (!c) return;
+    c.innerHTML = '';
+    c.appendChild(h('h3', {className: 's-title'}, '📱 QR Sifarişlər'));
+    c.appendChild(h('div', {id: 'ka-selfOrdersList'}));
+    const el = document.getElementById('ka-selfOrdersList');
+    const selfOrders = DATA.selfOrders.slice().sort((a, b) => b.id - a.id);
+    if (!selfOrders.length) {
+        el.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:40px;'}, '📱 QR sifariş yoxdur'));
+        return;
+    }
+    selfOrders.forEach(so => {
+        const statusReng = {'gozlemede': '#f39c12', 'qebul': '#3498db', 'hazirlanir': '#9b59b6', 'hazir': '#2ecc71', 'catdirildi': '#27ae60', 'legv': '#e74c3c'}[so.status] || '#aaa';
+        const statusAd = {'gozlemede': '⏳ Hazırlanır', 'qebul': '✅ Qəbul edildi', 'hazirlanir': '🍳 Hazırlanır', 'hazir': '🎉 Hazır', 'catdirildi': '📦 Çatdırıldı', 'legv': '❌ Ləğv edildi'}[so.status] || so.status;
+        
+        // Yeməklər və içkilər ayrı
+        const yemekler = so.mehsullar.filter(x => !ICKILER.includes(MEHSUL_KAT[x.ad]));
+        const ickiler = so.mehsullar.filter(x => ICKILER.includes(MEHSUL_KAT[x.ad]));
+        
+        const mehsulList = h('div', {style: 'margin-top:10px;'},
+            yemekler.length ? h('div', {},
+                h('div', {style: 'color:#f39c12;font-weight:bold;margin-bottom:5px;font-size:13px;'}, '🍽️ Yeməklər'),
+                ...yemekler.map(x => h('div', {style: 'display:flex;justify-content:space-between;padding:4px 0;font-size:13px;'},
+                    h('span', {}, x.ad + ' x' + x.miqdar),
+                    h('span', {style: 'color:#e94560;'}, pul(x.q * x.miqdar))
+                ))
+            ) : null,
+            ickiler.length ? h('div', {style: 'margin-top:8px;'},
+                h('div', {style: 'color:#3498db;font-weight:bold;margin-bottom:5px;font-size:13px;'}, '🥤 İçkilər'),
+                ...ickiler.map(x => h('div', {style: 'display:flex;justify-content:space-between;padding:4px 0;font-size:13px;'},
+                    h('span', {}, x.ad + ' x' + x.miqdar),
+                    h('span', {style: 'color:#e94560;'}, pul(x.q * x.miqdar))
+                ))
+            ) : null
+        );
+        
+        const btnler = h('div', {className: 'aktiv-masa-btnler', style: 'margin-top:15px;'},
+            so.status === 'gozlemede' ? h('button', {className: 'small-btn', style: 'background:#9b59b6;', onclick: () => ad_selfOrderStatus(so.id, 'hazirlanir')}, '🍳 Hazırlanır') : null,
+            so.status === 'hazirlanir' ? h('button', {className: 'small-btn', style: 'background:#2ecc71;', onclick: () => ad_selfOrderStatus(so.id, 'hazir')}, '🎉 Hazır') : null,
+            so.status === 'hazir' ? h('button', {className: 'small-btn', style: 'background:#27ae60;', onclick: () => ad_selfOrderStatus(so.id, 'catdirildi')}, '📦 Çatdırıldı') : null,
+            so.status !== 'legv' && so.status !== 'catdirildi' ? h('button', {className: 'small-btn', style: 'background:#e74c3c;', onclick: () => ad_selfOrderStatus(so.id, 'legv')}, '❌ Ləğv') : null
+        );
+        
+        el.appendChild(h('div', {className: 'aktiv-masa-kart', style: `border-color:${statusReng};`},
+            h('div', {className: 'aktiv-masa-header'},
+                h('div', {},
+                    h('div', {className: 'aktiv-masa-ad', style: `color:${statusReng};`}, 
+                        so.tip === 'masa' ? `🍽️ ${so.masa_ad}` : `🚶 ${so.musteri_ad}`
+                    ),
+                    h('div', {className: 'aktiv-masa-info'}, so.tip === 'masa' ? 'Masa sifarişi' : `📞 ${so.musteri_tel}`),
+                    h('div', {style: `display:inline-block; margin-top:8px; padding:4px 12px; border-radius:20px; background:${statusReng}25; border:1px solid ${statusReng}; color:${statusReng}; font-size:13px; font-weight:bold;`}, statusAd)
+                ),
+                h('div', {className: 'aktiv-masa-mebleg'}, pul(so.toplam))
+            ),
+            mehsulList, btnler
+        ));
+    });
 }
 
 function ka_renderAlislar() {
@@ -1265,8 +1161,7 @@ function ka_renderAlislar() {
         h('input', {type: 'number', id: 'ka-malQiymet', placeholder: 'Qiymət', step: '0.01'}),
         h('input', {type: 'number', id: 'ka-malMiqdar', placeholder: 'Miqdar', value: '1'}),
         h('input', {type: 'text', id: 'ka-malQeyd', placeholder: 'Qeyd'}),
-        h('button', {onclick: ka_alisElave}, '+ Alış əlavə et'),
-        h('button', {style: 'background:#27ae60;', onclick: () => window.print()}, '🖨️ Çap et')
+        h('button', {onclick: ka_alisElave}, '+ Alış əlavə et')
     ));
     c.appendChild(h('div', {className: 'stats'},
         h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ka-alisCemi'}, '0.00 ₼'), h('div', {className: 'l'}, 'Günlük Cəmi')),
@@ -1289,10 +1184,7 @@ function ka_alislariYukle() {
     if (el1) el1.textContent = pul(cem(alislar, x => x.cemi));
     if (el2) el2.textContent = alislar.length;
     tb.innerHTML = '';
-    if (!alislar.length) {
-        tb.appendChild(h('tr', {}, h('td', {colspan: '6', style: 'text-align:center;color:#aaa;padding:20px;'}, 'Alış yoxdur')));
-        return;
-    }
+    if (!alislar.length) { tb.appendChild(h('tr', {}, h('td', {colspan: '6', style: 'text-align:center;color:#aaa;padding:20px;'}, 'Alış yoxdur'))); return; }
     alislar.forEach(a => tb.appendChild(h('tr', {},
         h('td', {}, a.mal_ad), h('td', {}, pul(a.qiymet)), h('td', {}, a.miqdar),
         h('td', {style: 'color:#2ecc71;font-weight:bold;'}, pul(a.cemi)), h('td', {}, a.qeyd || '-'), h('td', {}, tarixFormat(a.tarix)))));
@@ -1307,23 +1199,16 @@ async function ka_alisElave() {
     try {
         const user = istifadeciAl();
         const aid = await yeniId('alis');
-        await FB.set(DR('alislar/' + aid), {
-            id: aid, mal_ad, qiymet, miqdar, cemi: qiymet * miqdar, qeyd,
-            isci_id: user.id, isci_ad: user.ad, tarix: new Date().toISOString()
-        });
+        await FB.set(DR('alislar/' + aid), {id: aid, mal_ad, qiymet, miqdar, cemi: qiymet * miqdar, qeyd, isci_id: user.id, isci_ad: user.ad, tarix: new Date().toISOString()});
         ['ka-malAd', 'ka-malQiymet', 'ka-malQeyd'].forEach(i => document.getElementById(i).value = '');
         document.getElementById('ka-malMiqdar').value = '1';
         toast('✅ Alış əlavə edildi!', 'success');
         ka_alislariYukle();
-    } catch (err) {
-        toast('❌ Xəta: ' + err.message, 'error', 5000);
-    }
+    } catch (err) { toast('❌ Xəta: ' + err.message, 'error', 5000); }
 }
 
-// ============================================================
-// QR SELF-ORDER (Düzəliş 1, 2, 4)
-// ============================================================
-let QR = { tip: null, masaId: null, masaAd: '', musteri_ad: '', musteri_tel: '', sebet: [] };
+// ==================== QR SELF-ORDER ====================
+let QR = {tip: null, masaId: null, masaAd: '', musteri_ad: '', musteri_tel: '', sebet: []};
 
 function qrSecimEkrani() {
     app.innerHTML = '';
@@ -1334,18 +1219,14 @@ function qrSecimEkrani() {
             h('p', {style: 'color:#aaa; margin-top:10px; font-size:15px;'}, 'Necə istəyirsiniz?')
         ),
         h('div', {style: 'display:flex; flex-direction:column; gap:20px; width:100%; max-width:400px;'},
-            h('div', {
-                style: 'background:linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03)); border:2px solid rgba(255,255,255,0.15); border-radius:20px; padding:40px 30px; text-align:center; cursor:pointer; transition:0.3s;',
-                onclick: () => qrMasaSecimi()
-            },
+            h('div', {style: 'background:linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03)); border:2px solid rgba(255,255,255,0.15); border-radius:20px; padding:40px 30px; text-align:center; cursor:pointer;',
+                onclick: () => qrMasaSecimi()},
                 h('div', {style: 'font-size:70px; margin-bottom:15px;'}, '🍽️'),
                 h('div', {style: 'font-size:24px; font-weight:bold; color:#fff;'}, 'Masada oturacam'),
                 h('div', {style: 'font-size:14px; color:#bbb; margin-top:8px;'}, 'Masa nömrəsini seçin')
             ),
-            h('div', {
-                style: 'background:linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03)); border:2px solid rgba(255,255,255,0.15); border-radius:20px; padding:40px 30px; text-align:center; cursor:pointer; transition:0.3s;',
-                onclick: () => qrPaketSecimi()
-            },
+            h('div', {style: 'background:linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03)); border:2px solid rgba(255,255,255,0.15); border-radius:20px; padding:40px 30px; text-align:center; cursor:pointer;',
+                onclick: () => qrPaketSecimi()},
                 h('div', {style: 'font-size:70px; margin-bottom:15px;'}, '🚶'),
                 h('div', {style: 'font-size:24px; font-weight:bold; color:#fff;'}, 'Özümlə aparacam'),
                 h('div', {style: 'font-size:14px; color:#bbb; margin-top:8px;'}, 'Ad və telefon daxil edin')
@@ -1355,34 +1236,45 @@ function qrSecimEkrani() {
     app.appendChild(box);
 }
 
+// Düzəliş 4: 2 kabinet əlavə
 function qrMasaSecimi() {
     app.innerHTML = '';
     const masalar = DATA.masalar.filter(m => m.nov === 'masa').sort((a, b) => a.id - b.id);
+    const kabinetler = DATA.masalar.filter(m => m.nov === 'kabinet').sort((a, b) => a.id - b.id);
+    
+    const masaKart = (m) => {
+        const doludur = masaDoludur(m.id);
+        return h('div', {
+            className: 'masa' + (doludur ? ' bagli' : ''),
+            style: doludur ? 'opacity:0.45;cursor:not-allowed;filter:grayscale(0.6);' : 'cursor:pointer;',
+            onclick: () => {
+                if (doludur) { toast('❌ Bu masa dolu!', 'error'); return; }
+                QR.tip = 'masa';
+                QR.masaId = m.id;
+                QR.masaAd = m.ad;
+                QR.sebet = [];
+                qrMenyuEkrani();
+            }
+        },
+            h('div', {className: 'ad'}, m.ad),
+            doludur ? h('div', {className: 'st', style: 'color:#ff9800;font-size:11px;'}, '🔴 Dolu') : null
+        );
+    };
+    
     const box = h('div', {style: 'min-height:100vh; padding:20px;'},
         h('div', {style: 'text-align:center; margin-bottom:25px; padding-top:20px;'},
             h('h2', {style: 'font-size:22px; color:#fff;'}, '🍽️ Masa seçin'),
             h('p', {style: 'color:#aaa; margin-top:5px; font-size:13px;'}, 'Oturduğunuz masanı seçin')
         ),
-        h('div', {className: 'masalar', style: 'max-width:600px; margin:0 auto;'},
-            ...masalar.map(m => h('div', {
-                className: 'masa',
-                style: 'cursor:pointer;',
-                onclick: () => {
-                    QR.tip = 'masa';
-                    QR.masaId = m.id;
-                    QR.masaAd = m.ad;
-                    QR.sebet = [];
-                    qrMenyuEkrani();
-                }
-            },
-                h('div', {className: 'ad'}, m.ad)
-            ))
+        h('h3', {style: 'color:#e94560;max-width:600px;margin:0 auto 10px;font-size:16px;'}, '🍽️ Masalar'),
+        h('div', {className: 'masalar', style: 'max-width:600px; margin:0 auto 30px;'},
+            ...masalar.map(masaKart)
         ),
-        h('button', {
-            className: 's-btn b-geri',
-            style: 'max-width:600px; margin:20px auto 0;',
-            onclick: () => qrSecimEkrani()
-        }, '← Geri')
+        h('h3', {style: 'color:#9b59b6;max-width:600px;margin:0 auto 10px;font-size:16px;'}, '🚪 Kabinetlər'),
+        h('div', {className: 'masalar kabinetler', style: 'max-width:600px; margin:0 auto;'},
+            ...kabinetler.map(masaKart)
+        ),
+        h('button', {className: 's-btn b-geri', style: 'max-width:600px; margin:20px auto 0;', onclick: () => qrSecimEkrani()}, '← Geri')
     );
     app.appendChild(box);
 }
@@ -1397,24 +1289,14 @@ function qrPaketSecimi() {
             h('p', {style: 'color:#aaa; text-align:center; margin-bottom:20px; font-size:13px;'}, 'Adınızı və telefonunuzu daxil edin'),
             h('div', {style: 'display:flex; flex-direction:column; gap:15px;'},
                 adInput, telInput,
-                h('button', {
-                    className: 's-btn b-tamam',
-                    onclick: () => {
-                        const ad = adInput.value.trim();
-                        const tel = telInput.value.trim();
-                        if (!ad) { toast('❌ Adınızı daxil edin!', 'error'); return; }
-                        if (!tel) { toast('❌ Telefonunuzu daxil edin!', 'error'); return; }
-                        QR.tip = 'paket';
-                        QR.musteri_ad = ad;
-                        QR.musteri_tel = tel;
-                        QR.sebet = [];
-                        qrMenyuEkrani();
-                    }
-                }, '✅ Davam et'),
-                h('button', {
-                    className: 's-btn b-geri',
-                    onclick: () => qrSecimEkrani()
-                }, '← Geri')
+                h('button', {className: 's-btn b-tamam', onclick: () => {
+                    const ad = adInput.value.trim(), tel = telInput.value.trim();
+                    if (!ad) { toast('❌ Ad!', 'error'); return; }
+                    if (!tel) { toast('❌ Telefon!', 'error'); return; }
+                    QR.tip = 'paket'; QR.musteri_ad = ad; QR.musteri_tel = tel; QR.sebet = [];
+                    qrMenyuEkrani();
+                }}, '✅ Davam et'),
+                h('button', {className: 's-btn b-geri', onclick: () => qrSecimEkrani()}, '← Geri')
             )
         )
     );
@@ -1424,33 +1306,25 @@ function qrPaketSecimi() {
 function qrMenyuEkrani() {
     app.innerHTML = '';
     const basliq = QR.tip === 'masa' ? `🍽️ ${QR.masaAd}` : `🚶 Özümlə aparacam`;
-    
     app.appendChild(h('div', {className: 'header'},
         h('h2', {}, basliq),
-        h('div', {className: 'info'},
-            h('span', {className: 'user-name', style: 'background:rgba(46,204,113,0.2); border-color:rgba(46,204,113,0.4);'}, '👤 Müştəri')
-        )
+        h('div', {className: 'info'}, h('span', {className: 'user-name', style: 'background:rgba(46,204,113,0.2); border-color:rgba(46,204,113,0.4);'}, '👤 Müştəri'))
     ));
     app.appendChild(h('div', {className: 'container', id: 'qr-container'}));
-    
     const c = document.getElementById('qr-container');
     c.innerHTML = '';
-    
     const sebetPanelFn = () => h('div', {className: 'sebet'},
         h('h3', {}, '🛒 Səbətiniz'),
         h('div', {id: 'qr-sebetItems'}),
         h('div', {className: 'toplam'}, h('span', {}, 'Toplam:'), h('span', {id: 'qr-toplam'}, '0.00 ₼'))
     );
-    
     const katsEl = h('div', {className: 'kats'});
     const mehsEl = h('div', {className: 'mehsullar'});
     c.appendChild(h('div', {className: 'menyu-wrap'}, h('div', {}, katsEl, mehsEl), sebetPanelFn()));
-    
     c.appendChild(h('div', {className: 'alt-duymeler', style: 'grid-template-columns:1fr 1fr;'},
         h('button', {className: 's-btn b-tamam', onclick: () => qrSifarisTamamla()}, '📤 Sifariş ver'),
         h('button', {className: 's-btn b-geri', onclick: () => qrSecimEkrani()}, '← Geri')
     ));
-    
     let ilkKat = null;
     const sec = (k, btn) => {
         katsEl.querySelectorAll('.kat').forEach(b => b.classList.remove('active'));
@@ -1458,30 +1332,24 @@ function qrMenyuEkrani() {
         mehsEl.innerHTML = '';
         Object.entries(MENYU[k]).forEach(([ad, q]) => {
             const stokdaYox = MENYU_STOK[ad] === true;
-            const mehsul = h('div', {
-                className: 'mehsul', 
-                style: stokdaYox ? 'opacity:0.4;cursor:not-allowed;' : '',
+            mehsEl.appendChild(h('div', {
+                className: 'mehsul' + (stokdaYox ? ' stokda-yox' : ''),
                 onclick: () => {
-                    if (stokdaYox) { toast('❌ Bu məhsul stokda yoxdur!', 'error'); return; }
+                    if (stokdaYox) { toast('❌ Stokda yoxdur!', 'error'); return; }
                     const m = QR.sebet.find(x => x.ad === ad);
                     if (m) m.miqdar++; else QR.sebet.push({ad, q, miqdar: 1});
                     qrSebetYenile();
-                    toast(`✅ ${ad} əlavə edildi`, 'success', 1500);
+                    toast(`✅ ${ad}`, 'success', 1500);
                 }
-            }, 
-                h('div', {className: 'ad'}, ad + (stokdaYox ? ' ❌' : '')), 
-                h('div', {className: 'q'}, pul(q))
-            );
-            mehsEl.appendChild(mehsul);
+            }, h('div', {className: 'ad'}, ad), h('div', {className: 'q'}, pul(q))));
         });
     };
-    
     YEMEKLER.concat(ICKILER).forEach(k => {
         const b = h('button', {className: 'kat', onclick: () => sec(k, b)}, k);
         if (!ilkKat) ilkKat = b;
         katsEl.appendChild(b);
     });
-    sec(YEMEKLER[0], ilkKat);
+    sec(YEMEKLER[0] || Object.keys(MENYU)[0], ilkKat);
     qrSebetYenile();
 }
 
@@ -1489,83 +1357,55 @@ function qrSebetYenile() {
     const el = document.getElementById('qr-sebetItems');
     if (!el) return;
     el.innerHTML = '';
-    if (!QR.sebet.length) {
-        el.appendChild(h('p', {style: 'color:#aaa;text-align:center;padding:20px;'}, 'Səbət boşdur'));
-    }
-    
-    // Düzəliş 1: yeməklər və içkilər ayrı göstərilsin
+    if (!QR.sebet.length) el.appendChild(h('p', {style: 'color:#aaa;text-align:center;padding:20px;'}, 'Səbət boşdur'));
     const yemekler = QR.sebet.filter(s => !ICKILER.includes(MEHSUL_KAT[s.ad]));
     const ickiler = QR.sebet.filter(s => ICKILER.includes(MEHSUL_KAT[s.ad]));
-    
     const satirEl = (s, orijinalIdx) => h('div', {className: 's-item'},
         h('div', {}, `${s.ad} x${s.miqdar}`, h('br'), h('small', {style: 'color:#e94560;'}, pul(s.q * s.miqdar))),
         h('span', {className: 'sil', onclick: () => { QR.sebet.splice(orijinalIdx, 1); qrSebetYenile(); }}, '✕')
     );
-    
     if (yemekler.length) {
         el.appendChild(h('div', {style: 'font-weight:bold;color:#f39c12;margin:6px 0 2px;font-size:13px;'}, '🍽️ Yeməklər'));
-        yemekler.forEach(s => {
-            const idx = QR.sebet.indexOf(s);
-            el.appendChild(satirEl(s, idx));
-        });
+        yemekler.forEach(s => { const idx = QR.sebet.indexOf(s); el.appendChild(satirEl(s, idx)); });
     }
     if (ickiler.length) {
         el.appendChild(h('div', {style: 'font-weight:bold;color:#3498db;margin:12px 0 2px;font-size:13px;'}, '🥤 İçkilər'));
-        ickiler.forEach(s => {
-            const idx = QR.sebet.indexOf(s);
-            el.appendChild(satirEl(s, idx));
-        });
+        ickiler.forEach(s => { const idx = QR.sebet.indexOf(s); el.appendChild(satirEl(s, idx)); });
     }
-    
     const t = document.getElementById('qr-toplam');
     if (t) t.textContent = pul(cem(QR.sebet, s => s.q * s.miqdar));
 }
 
+// Düzəliş 2: SelfOrder — dərhal hazırlanır (admin təsdiqi yoxdur)
 async function qrSifarisTamamla() {
-    if (!QR.sebet.length) {
-        toast('❌ Səbət boşdur!', 'warning');
-        return;
-    }
+    if (!QR.sebet.length) { toast('❌ Səbət boşdur!', 'warning'); return; }
     try {
         const id = await yeniId('selforder');
         const siparis = {
-            id,
-            tip: QR.tip,
+            id, tip: QR.tip,
             masa_id: QR.tip === 'masa' ? QR.masaId : null,
             masa_ad: QR.tip === 'masa' ? QR.masaAd : '',
             musteri_ad: QR.tip === 'paket' ? QR.musteri_ad : '',
             musteri_tel: QR.tip === 'paket' ? QR.musteri_tel : '',
             mehsullar: QR.sebet,
             toplam: cem(QR.sebet, s => s.q * s.miqdar),
-            status: 'gozlemede',
+            status: 'hazirlanir', // Düzəliş 2: dərhal hazırlanır
             odenis_novu: null,
             tarix: new Date().toISOString()
         };
         await FB.set(DR('selfOrders/' + id), siparis);
-        toast('✅ Sifarişiniz qəbul edildi! Tezliklə hazırlanacaq.', 'success', 5000);
-        setTimeout(() => {
-            QR.sebet = [];
-            qrSecimEkrani();
-        }, 1500);
-    } catch (err) {
-        toast('❌ Xəta: ' + err.message, 'error', 5000);
-    }
+        toast('✅ Sifarişiniz qəbul edildi! Hazırlanır...', 'success', 5000);
+        setTimeout(() => { QR.sebet = []; qrSecimEkrani(); }, 1500);
+    } catch (err) { toast('❌ Xəta: ' + err.message, 'error', 5000); }
 }
 
-// ============================================================
-// ADMIN
-// ============================================================
+// ==================== ADMIN ====================
 let charts = {};
 const AD_TABS = [
-    ['isciler', '👥 İşçilər'], 
-    ['aktivlik', '📋 Aktivlik'],
-    ['selforders', '🛒 SelfOrders'],
-    ['alislar', '🛒 Alışlar'], 
-    ['endirimler', '💰 Endirimlər'],
-    ['hesabat', '📊 Hesabat'], 
-    ['qrafikler', '📈 Qrafiklər'],
-    ['menyu', '🍽️ Menyu'],
-    ['ayarlar', '⚙️ Ayarlar'], 
+    ['isciler', '👥 İşçilər'], ['aktivlik', '📋 Aktivlik'],
+    ['selforders', '📱 SelfOrders'], ['alislar', '🛒 Alışlar'],
+    ['endirimler', '💰 Endirimlər'], ['hesabat', '📊 Hesabat'],
+    ['qrafikler', '📈 Qrafiklər'], ['ayarlar', '⚙️ Ayarlar'],
     ['sifirla', '🗑️ Sıfırla']
 ];
 
@@ -1580,9 +1420,8 @@ function adminPanel() {
     ad_render();
 }
 
-// Düzəliş 8: Hər səhifəyə Yenilə düyməsi
 function yenileBtn(func) {
-    return h('button', {style: 'background:#3498db; margin-bottom:15px; padding:10px 20px; border:none; border-radius:8px; color:#fff; cursor:pointer; font-weight:600;', onclick: func}, '🔄 Yenilə');
+    return h('button', {style: 'background:#3498db; margin-bottom:15px; padding:10px 20px; border:none; border-radius:8px; color:#fff; cursor:pointer; font-weight:600;', onclick: () => { func(); toast('✅ Yeniləndi', 'info', 1500); }}, '🔄 Yenilə');
 }
 
 function ad_render() {
@@ -1590,19 +1429,12 @@ function ad_render() {
     c.innerHTML = '';
     const tabs = h('div', {className: 'tabs'});
     AD_TABS.forEach(([k, l], i) => tabs.appendChild(
-        h('button', {className: 'tab' + (i === 0 ? ' active' : ''), onclick: e => ad_tabSec(k, e.target)}, l)));
+        h('button', {className: 'tab' + (i === 0 ? ' active' : ''), 'data-tab': k, onclick: e => ad_tabSec(k, e.target)}, l)));
     c.appendChild(tabs);
     AD_TABS.forEach(([k], i) => c.appendChild(h('div', {className: 'panel' + (i === 0 ? ' active' : ''), id: 'ad-p-' + k})));
-    ad_renderIsciler(); 
-    ad_renderAktivlik(); 
-    ad_renderSelfOrders();
-    ad_renderAlislar();
-    ad_renderEndirimler(); 
-    ad_renderHesabat();
-    ad_renderQrafikler(); 
-    ad_renderMenyu();
-    ad_renderAyarlar(); 
-    ad_renderSifirla();
+    ad_renderIsciler(); ad_renderAktivlik(); ad_renderSelfOrders();
+    ad_renderAlislar(); ad_renderEndirimler(); ad_renderHesabat();
+    ad_renderQrafikler(); ad_renderAyarlar(); ad_renderSifirla();
 }
 
 function ad_tabSec(tab, btn) {
@@ -1613,12 +1445,10 @@ function ad_tabSec(tab, btn) {
     if (tab === 'sifirla') ad_sifirlaStatistika();
     if (tab === 'aktivlik') ad_aktivlikYukle();
     if (tab === 'selforders') ad_selfOrdersYukle();
-    if (tab === 'menyu') ad_menyuYukle();
+    if (tab === 'ayarlar') ad_ayarlarYukle();
 }
 
-// ============================================================
 // İŞÇİLƏR
-// ============================================================
 function ad_renderIsciler() {
     const c = document.getElementById('ad-p-isciler');
     c.innerHTML = '';
@@ -1626,8 +1456,7 @@ function ad_renderIsciler() {
     c.appendChild(h('div', {className: 'form'},
         h('input', {type: 'text', id: 'yeniKod', placeholder: 'Kod (min 4 rəqəm)', maxlength: '10'}),
         h('input', {type: 'text', id: 'yeniAd', placeholder: 'Ad'}),
-        h('select', {id: 'yeniRol'},
-            h('option', {value: 'ofisiant'}, 'Ofisiant'), h('option', {value: 'kassir'}, 'Kassir'), h('option', {value: 'paketci'}, 'Paketçi')),
+        h('select', {id: 'yeniRol'}, h('option', {value: 'ofisiant'}, 'Ofisiant'), h('option', {value: 'kassir'}, 'Kassir'), h('option', {value: 'paketci'}, 'Paketçi')),
         h('button', {onclick: ad_isciElaveEt}, '+ Əlavə et')
     ));
     c.appendChild(h('div', {className: 'form'}, yenileBtn(ad_iscileriYukle)));
@@ -1642,18 +1471,11 @@ function ad_iscileriYukle() {
     const tb = document.getElementById('ad-iscilerTable');
     if (!tb) return;
     tb.innerHTML = '';
-    if (!isciler.length) {
-        tb.appendChild(h('tr', {}, h('td', {colspan: '4', style: 'text-align:center;color:#aaa;padding:20px;'}, 'İşçi yoxdur')));
-        return;
-    }
+    if (!isciler.length) { tb.appendChild(h('tr', {}, h('td', {colspan: '4', style: 'text-align:center;color:#aaa;padding:20px;'}, 'İşçi yoxdur'))); return; }
     const icons = {kassir: '💰 Kassir', ofisiant: '🍽️ Ofisiant', paketci: '📦 Paketçi'};
     isciler.sort((a, b) => a.id - b.id).forEach(i => tb.appendChild(h('tr', {},
         h('td', {}, h('b', {}, i.kod)), h('td', {}, i.ad), h('td', {}, icons[i.rol] || i.rol),
-        h('td', {},
-            h('button', {className: 'small-btn edit-b', onclick: () => ad_isciDuzelis(i.id)}, '✏️'),
-            h('button', {className: 'small-btn del-b', onclick: () => ad_isciSil(i.id)}, '🗑️'))
-    )));
-    toast('✅ İşçilər yeniləndi', 'info', 1500);
+        h('td', {}, h('button', {className: 'small-btn edit-b', onclick: () => ad_isciDuzelis(i.id)}, '✏️'), h('button', {className: 'small-btn del-b', onclick: () => ad_isciSil(i.id)}, '🗑️')))));
 }
 
 const kassirSayi = (isciler, haric) => isciler.filter(i => i.rol === 'kassir' && i.id !== haric).length;
@@ -1662,159 +1484,121 @@ async function ad_isciElaveEt() {
     const kod = document.getElementById('yeniKod').value.trim();
     const ad = document.getElementById('yeniAd').value.trim();
     const rol = document.getElementById('yeniRol').value;
-    if (!kodDuzgundur(kod)) { toast('❌ Kod ən azı 4 rəqəm olmalıdır!', 'error'); return; }
-    if (!ad || !adDuzgundur(ad)) { toast('❌ Ad yalnız hərf olmalıdır!', 'error'); return; }
-    if (DATA.isciler.find(i => i.kod === kod)) { toast('❌ Bu kod mövcuddur!', 'error'); return; }
-    if (rol === 'kassir' && kassirSayi(DATA.isciler) >= 2) {
-        toast('❌ Maksimum 2 kassir ola bilər!', 'error'); return;
-    }
+    if (!kodDuzgundur(kod)) { toast('❌ Kod min 4 rəqəm!', 'error'); return; }
+    if (!ad || !adDuzgundur(ad)) { toast('❌ Ad yalnız hərf!', 'error'); return; }
+    if (DATA.isciler.find(i => i.kod === kod)) { toast('❌ Kod mövcuddur!', 'error'); return; }
+    if (rol === 'kassir' && kassirSayi(DATA.isciler) >= 2) { toast('❌ Maks. 2 kassir!', 'error'); return; }
     try {
         const id = await yeniId('isci');
         await FB.set(DR('isciler/' + id), {id, kod, ad, rol});
         document.getElementById('yeniKod').value = '';
         document.getElementById('yeniAd').value = '';
         toast('✅ İşçi əlavə edildi!', 'success');
-    } catch (err) {
-        toast('❌ Xəta: ' + err.message, 'error', 5000);
-    }
+    } catch (err) { toast('❌ Xəta: ' + err.message, 'error', 5000); }
     setTimeout(ad_iscileriYukle, 300);
 }
 
 async function ad_isciSil(id) {
     const isci = DATA.isciler.find(i => i.id === id);
     if (!isci || isci.rol === 'admin') return;
-    confirmDialog(`"${esc(isci.ad)}" adlı işçini silmək istəyirsiniz?`, async cavab => {
+    confirmDialog(`"${esc(isci.ad)}" silinsin?`, async cavab => {
         if (!cavab) return;
         try {
             const aktivS = DATA.sessiyalar.filter(s => s.isci_id === id && s.status === 'aktiv');
             for (const s of aktivS) await sessiyaBagla(s.id);
             await FB.remove(DR('isciler/' + id));
             toast(`✅ "${isci.ad}" silindi!`, 'success');
-        } catch (err) {
-            toast('❌ Xəta: ' + err.message, 'error', 5000);
-        }
+        } catch (err) { toast('❌ Xəta: ' + err.message, 'error', 5000); }
         setTimeout(ad_iscileriYukle, 300);
-    }, 'İşçini sil', '🗑️');
+    }, 'Sil', '🗑️');
 }
 
 async function ad_isciDuzelis(id) {
     const i = DATA.isciler.find(x => x.id === id);
     if (!i) return;
-    const kod = (prompt('Kod (min 4 rəqəm):', i.kod) || '').trim(); if (!kod) return;
+    const kod = (prompt('Kod (min 4):', i.kod) || '').trim(); if (!kod) return;
     const ad = (prompt('Ad:', i.ad) || '').trim(); if (!ad) return;
     const rol = (prompt('Rol (ofisiant/kassir/paketci):', i.rol) || '').trim().toLowerCase(); if (!rol) return;
-
-    if (!kodDuzgundur(kod)) { toast('❌ Kod ən azı 4 rəqəm olmalıdır!', 'error'); return; }
-    if (!adDuzgundur(ad)) { toast('❌ Ad yalnız hərf olmalıdır!', 'error'); return; }
+    if (!kodDuzgundur(kod)) { toast('❌ Kod min 4 rəqəm!', 'error'); return; }
+    if (!adDuzgundur(ad)) { toast('❌ Ad yalnız hərf!', 'error'); return; }
     if (!['ofisiant', 'kassir', 'paketci'].includes(rol)) { toast('❌ Rol yanlışdır!', 'error'); return; }
-    if (DATA.isciler.find(x => x.kod === kod && x.id !== id)) { toast('❌ Bu kod mövcuddur!', 'error'); return; }
-    if (rol === 'kassir' && i.rol !== 'kassir' && kassirSayi(DATA.isciler, id) >= 2) {
-        toast('❌ Maksimum 2 kassir ola bilər!', 'error'); return;
-    }
+    if (DATA.isciler.find(x => x.kod === kod && x.id !== id)) { toast('❌ Kod mövcuddur!', 'error'); return; }
+    if (rol === 'kassir' && i.rol !== 'kassir' && kassirSayi(DATA.isciler, id) >= 2) { toast('❌ Maks. 2 kassir!', 'error'); return; }
     await FB.update(DR('isciler/' + id), {kod, ad, rol});
-    toast('✅ İşçi yeniləndi!', 'success');
+    toast('✅ Yeniləndi!', 'success');
     setTimeout(ad_iscileriYukle, 300);
 }
 
-// ============================================================
-// AKTİVLİK (Düzəliş 3: mavi rəng, kassir bağlama)
-// ============================================================
+// AKTİVLİK
 function ad_renderAktivlik() {
     const c = document.getElementById('ad-p-aktivlik');
     c.innerHTML = '';
     c.appendChild(h('h3', {className: 's-title'}, '📋 Aktivlik'));
     c.appendChild(h('div', {className: 'form'}, yenileBtn(ad_aktivlikYukle)));
-    
     c.appendChild(h('h4', {className: 'bolme-basliq'}, '🍽️ Aktiv Masalar'));
     c.appendChild(h('div', {id: 'ad-aktivMasalarList'}));
-    
     c.appendChild(h('h4', {className: 'bolme-basliq paket-basliq', style: 'margin-top:30px;'}, '📦 Aktiv Paketlər'));
     c.appendChild(h('div', {id: 'ad-aktivPaketlerList'}));
-    
     ad_aktivlikYukle();
 }
 
-function ad_aktivlikYukle() {
-    // Masalar
+function ad_aktivlikYukleSessiz() {
+    // Düzəliş 1: Səssiz yenilə — bildiriş yoxdur
     const sessMasalar = DATA.sessiyalar.filter(s => s.status === 'aktiv' && s.tip === 'masa');
     const elM = document.getElementById('ad-aktivMasalarList');
     if (elM) {
         elM.innerHTML = '';
-        if (!sessMasalar.length) {
-            elM.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:20px;'}, '✅ Aktiv masa yoxdur'));
-        } else {
+        if (!sessMasalar.length) elM.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:20px;'}, '✅ Aktiv masa yoxdur'));
+        else {
             sessMasalar.sort((a, b) => b.id - a.id).forEach(s => {
                 const sif = DATA.sifarisler.filter(x => x.sessiya_id === s.id);
                 const odenilib = s.odenis_novu != null;
                 const odenisAd = odenilib ? (s.odenis_novu === 'kart' ? '💳 Kart' : '💵 Nağd') : '⏳ Ödənilməyib';
-                
                 const tbl = h('table', {style: 'margin-top:15px;'},
                     h('thead', {}, h('tr', {}, ...['Məhsul', 'Miqdar', 'Qiymət', 'Məbləğ', 'Saat', 'Sil'].map(t => h('th', {}, t)))),
-                    h('tbody', {}, ...sif.map(x => h('tr', {},
-                        h('td', {}, x.mehsul_ad), h('td', {}, x.miqdar), h('td', {}, pul(x.qiymet)),
-                        h('td', {style: 'color:#e94560;font-weight:bold;'}, pul(x.mebleg)),
-                        h('td', {style: 'color:#aaa;font-size:12px;'}, new Date(x.tarix).toLocaleTimeString('az-AZ')),
-                        h('td', {}, h('button', {className: 'small-btn del-b', onclick: () => ad_sifarisSil(x.id)}, '🗑️'))))));
+                    h('tbody', {}, ...sif.map(x => h('tr', {}, h('td', {}, x.mehsul_ad), h('td', {}, x.miqdar), h('td', {}, pul(x.qiymet)), h('td', {style: 'color:#e94560;font-weight:bold;'}, pul(x.mebleg)), h('td', {style: 'color:#aaa;font-size:12px;'}, new Date(x.tarix).toLocaleTimeString('az-AZ')), h('td', {}, h('button', {className: 'small-btn del-b', onclick: () => ad_sifarisSil(x.id)}, '🗑️'))))));
                 elM.appendChild(h('div', {className: 'aktiv-masa-kart' + (odenilib ? ' cek-cap' : '')},
                     h('div', {className: 'aktiv-masa-header'},
-                        h('div', {},
-                            h('div', {className: 'aktiv-masa-ad'}, s.masa_ad),
-                            h('div', {className: 'aktiv-masa-info'}, `👤 ${s.isci_ad} · 🍽️ ${sif.length} sifariş · ${odenisAd}`),
-                            h('div', {className: 'aktiv-masa-timer'}, h('span', {}, '⏱️'),
-                                h('span', {className: 'aktiv-timer', 'data-baslama': s.baslama}, '00:00:00'))),
+                        h('div', {}, h('div', {className: 'aktiv-masa-ad'}, s.masa_ad), h('div', {className: 'aktiv-masa-info'}, `👤 ${s.isci_ad} · 🍽️ ${sif.length} sifariş · ${odenisAd}`), h('div', {className: 'aktiv-masa-timer'}, h('span', {}, '⏱️'), h('span', {className: 'aktiv-timer', 'data-baslama': s.baslama}, '00:00:00'))),
                         h('div', {className: 'aktiv-masa-mebleg'}, pul(s.yekun))),
                     sif.length ? tbl : h('p', {style: 'color:#aaa;padding:10px;'}, 'Sifariş yoxdur'),
-                    h('div', {className: 'aktiv-masa-btnler'},
-                        h('button', {className: 'small-btn', style: 'background:#e74c3c;', onclick: () => ad_masaBagla(s.id)}, '💰 Masa Bağla'))
+                    h('div', {className: 'aktiv-masa-btnler'}, h('button', {className: 'small-btn', style: 'background:#e74c3c;', onclick: () => ad_masaBagla(s.id)}, '💰 Masa Bağla'))
                 ));
             });
         }
     }
-    
-    // Paketlər
     const sessPaketler = DATA.sessiyalar.filter(s => s.status === 'aktiv' && s.tip === 'paket');
     const elP = document.getElementById('ad-aktivPaketlerList');
     if (elP) {
         elP.innerHTML = '';
-        if (!sessPaketler.length) {
-            elP.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:20px;'}, '✅ Aktiv paket yoxdur'));
-        } else {
+        if (!sessPaketler.length) elP.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:20px;'}, '✅ Aktiv paket yoxdur'));
+        else {
             sessPaketler.sort((a, b) => b.id - a.id).forEach(s => {
                 const sif = DATA.sifarisler.filter(x => x.sessiya_id === s.id);
                 const odenilib = s.odenis_novu != null;
                 const odenisAd = odenilib ? (s.odenis_novu === 'kart' ? '💳 Kart' : '💵 Nağd') : '⏳ Ödənilməyib';
-                
                 const tbl = h('table', {style: 'margin-top:15px;'},
                     h('thead', {}, h('tr', {}, ...['Məhsul', 'Miqdar', 'Qiymət', 'Məbləğ', 'Saat', 'Sil'].map(t => h('th', {}, t)))),
-                    h('tbody', {}, ...sif.map(x => h('tr', {},
-                        h('td', {}, x.mehsul_ad), h('td', {}, x.miqdar), h('td', {}, pul(x.qiymet)),
-                        h('td', {style: 'color:#e94560;font-weight:bold;'}, pul(x.mebleg)),
-                        h('td', {style: 'color:#aaa;font-size:12px;'}, new Date(x.tarix).toLocaleTimeString('az-AZ')),
-                        h('td', {}, h('button', {className: 'small-btn del-b', onclick: () => ad_sifarisSil(x.id)}, '🗑️'))))));
+                    h('tbody', {}, ...sif.map(x => h('tr', {}, h('td', {}, x.mehsul_ad), h('td', {}, x.miqdar), h('td', {}, pul(x.qiymet)), h('td', {style: 'color:#e94560;font-weight:bold;'}, pul(x.mebleg)), h('td', {style: 'color:#aaa;font-size:12px;'}, new Date(x.tarix).toLocaleTimeString('az-AZ')), h('td', {}, h('button', {className: 'small-btn del-b', onclick: () => ad_sifarisSil(x.id)}, '🗑️'))))));
                 elP.appendChild(h('div', {className: 'aktiv-masa-kart' + (odenilib ? ' cek-cap' : '')},
                     h('div', {className: 'aktiv-masa-header'},
-                        h('div', {},
-                            h('div', {className: 'aktiv-masa-ad', style: 'color:#f39c12;'}, '📦 Paket #' + s.paket_nomre),
-                            h('div', {className: 'aktiv-masa-info'}, `👤 ${s.isci_ad} · ${s.musteri_ad || '-'} · 📞 ${s.musteri_tel || '-'} · ${odenisAd}`),
-                            h('div', {className: 'aktiv-masa-info', style: 'color:#f39c12;margin-top:5px;'}, '📍 ' + (s.unvan || '-')),
-                            h('div', {className: 'aktiv-masa-timer'}, h('span', {}, '⏱️'),
-                                h('span', {className: 'aktiv-timer', 'data-baslama': s.baslama}, '00:00:00'))),
+                        h('div', {}, h('div', {className: 'aktiv-masa-ad', style: 'color:#f39c12;'}, '📦 Paket #' + s.paket_nomre), h('div', {className: 'aktiv-masa-info'}, `👤 ${s.isci_ad} · ${s.musteri_ad || '-'} · ${odenisAd}`), h('div', {className: 'aktiv-masa-timer'}, h('span', {}, '⏱️'), h('span', {className: 'aktiv-timer', 'data-baslama': s.baslama}, '00:00:00'))),
                         h('div', {className: 'aktiv-masa-mebleg'}, pul(s.yekun))),
                     sif.length ? tbl : h('p', {style: 'color:#aaa;padding:10px;'}, 'Sifariş yoxdur'),
-                    h('div', {className: 'aktiv-masa-btnler'},
-                        h('button', {className: 'small-btn', style: 'background:#e74c3c;', onclick: () => ad_masaBagla(s.id)}, '💰 Paket Bağla'))
+                    h('div', {className: 'aktiv-masa-btnler'}, h('button', {className: 'small-btn', style: 'background:#e74c3c;', onclick: () => ad_masaBagla(s.id)}, '💰 Paket Bağla'))
                 ));
             });
         }
     }
     timerBaslat();
-    toast('✅ Yeniləndi', 'info', 1500);
 }
+
+function ad_aktivlikYukle() { ad_aktivlikYukleSessiz(); }
 
 async function ad_sifarisSil(id) {
     const x = DATA.sifarisler.find(o => o.id === id);
     if (!x) return;
-    confirmDialog(`"${esc(x.mehsul_ad)} x${x.miqdar}" sifarişini silmək istəyirsiniz?`, async cavab => {
+    confirmDialog(`"${esc(x.mehsul_ad)} x${x.miqdar}" silinsin?`, async cavab => {
         if (!cavab) return;
         try {
             const s = DATA.sessiyalar.find(y => y.id === x.sessiya_id);
@@ -1823,163 +1607,101 @@ async function ad_sifarisSil(id) {
                 const nisbet = s.mebleg ? (s.endirim_mebleg || 0) / s.mebleg : 0;
                 const yeniMebleg = Math.max(0, (s.mebleg || 0) - x.mebleg);
                 const yeniEndirim = yeniMebleg * nisbet;
-                await FB.update(DR('sessiyalar/' + s.id), {
-                    mebleg: yeniMebleg,
-                    endirim_mebleg: yeniEndirim,
-                    yekun: yeniMebleg - yeniEndirim,
-                    endirim_faiz: yeniMebleg ? Math.round(nisbet * 1000) / 10 : 0
-                });
+                await FB.update(DR('sessiyalar/' + s.id), {mebleg: yeniMebleg, endirim_mebleg: yeniEndirim, yekun: yeniMebleg - yeniEndirim, endirim_faiz: yeniMebleg ? Math.round(nisbet * 1000) / 10 : 0});
             }
-            toast('✅ Sifariş silindi', 'success');
-        } catch (err) {
-            toast('❌ Xəta: ' + err.message, 'error', 5000);
-        }
+            toast('✅ Silindi', 'success');
+        } catch (err) { toast('❌ Xəta: ' + err.message, 'error', 5000); }
         setTimeout(ad_aktivlikYukle, 300);
-    }, 'Sifarişi sil', '🗑️');
+    }, 'Sil', '🗑️');
 }
 
-// Düzəliş 3: Masa bağlama (ödəniş növü ilə)
 async function ad_masaBagla(id) {
     const s = DATA.sessiyalar.find(x => x.id === id);
     if (!s) return;
-    
-    // Əgər çek çap olunmayıbsa, əvvəlcə çek çap etmək lazımdır
     if (!s.odenis_novu) {
-        confirmDialog(
-            'Əvvəlcə çek çap edilməlidir. Çek çap etmək istəyirsiniz?', 
-            async cavab => {
-                if (!cavab) return;
-                sessiyaCeki(id, s.masa_ad || 'Paket #' + s.paket_nomre);
-                // Çek çap olunduqdan sonra rəng dəyişsin
-                await FB.update(DR('sessiyalar/' + id), {odenis_novu: 'gozleyir'});
-                toast('✅ Çek çap olundu. İndi ödəniş növünü seçin.', 'info', 3000);
-                setTimeout(() => ad_aktivlikYukle(), 1000);
-            }, 
-            'Çek çap et', '🖨️'
-        );
+        confirmDialog('Əvvəlcə çek çap edin?', async cavab => {
+            if (!cavab) return;
+            sessiyaCeki(id, s.masa_ad || 'Paket #' + s.paket_nomre);
+            await FB.update(DR('sessiyalar/' + id), {odenis_novu: 'gozleyir'});
+            toast('✅ Çek çap olundu. Ödəniş seçin.', 'info', 3000);
+            setTimeout(() => ad_aktivlikYukle(), 1000);
+        }, 'Çek', '🖨️');
         return;
     }
-    
-    // Ödəniş növünü seç
     odenisModal(async (növ) => {
         if (!növ) return;
         try {
             await sessiyaBagla(id, növ);
-            toast('✅ Masa bağlandı! Ödəniş: ' + (növ === 'kart' ? '💳 Kart' : '💵 Nağd'), 'success');
-        } catch (err) {
-            toast('❌ Xəta: ' + err.message, 'error', 5000);
-        }
+            toast('✅ Bağlandı! ' + (növ === 'kart' ? '💳 Kart' : '💵 Nağd'), 'success');
+        } catch (err) { toast('❌ Xəta: ' + err.message, 'error', 5000); }
         setTimeout(ad_aktivlikYukle, 300);
     });
 }
 
-// ============================================================
 // SELF ORDERS
-// ============================================================
 function ad_renderSelfOrders() {
     const c = document.getElementById('ad-p-selforders');
     c.innerHTML = '';
-    c.appendChild(h('h3', {className: 's-title'}, '📱 QR Self-Order Sifarişləri'));
+    c.appendChild(h('h3', {className: 's-title'}, '📱 QR Self-Order'));
     c.appendChild(h('div', {className: 'form'}, yenileBtn(ad_selfOrdersYukle)));
     c.appendChild(h('div', {id: 'ad-selfOrdersList'}));
     ad_selfOrdersYukle();
 }
 
-function ad_selfOrdersYukle() {
+function ad_selfOrdersYukleSessiz() {
     const el = document.getElementById('ad-selfOrdersList');
     if (!el) return;
     el.innerHTML = '';
     const selfOrders = DATA.selfOrders.slice().sort((a, b) => b.id - a.id);
-    if (!selfOrders.length) {
-        el.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:40px;'}, '📱 QR sifarişi yoxdur'));
-        return;
-    }
+    if (!selfOrders.length) { el.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:40px;'}, '📱 QR sifariş yoxdur')); return; }
     selfOrders.forEach(so => {
-        const statusReng = {
-            'gozlemede': '#f39c12', 'qebul': '#3498db', 'hazirlanir': '#9b59b6',
-            'hazir': '#2ecc71', 'catdirildi': '#27ae60', 'legv': '#e74c3c'
-        }[so.status] || '#aaa';
-        const statusAd = {
-            'gozlemede': '⏳ Gözləmədə', 'qebul': '✅ Qəbul edildi',
-            'hazirlanir': '🍳 Hazırlanır', 'hazir': '🎉 Hazır',
-            'catdirildi': '📦 Çatdırıldı', 'legv': '❌ Ləğv edildi'
-        }[so.status] || so.status;
-        
-        // Düzəliş 1: Yeməklər və İçkilər ayrı
+        const statusReng = {'gozlemede': '#f39c12', 'qebul': '#3498db', 'hazirlanir': '#9b59b6', 'hazir': '#2ecc71', 'catdirildi': '#27ae60', 'legv': '#e74c3c'}[so.status] || '#aaa';
+        const statusAd = {'gozlemede': '⏳ Hazırlanır', 'qebul': '✅ Qəbul edildi', 'hazirlanir': '🍳 Hazırlanır', 'hazir': '🎉 Hazır', 'catdirildi': '📦 Çatdırıldı', 'legv': '❌ Ləğv'}[so.status] || so.status;
         const yemekler = so.mehsullar.filter(x => !ICKILER.includes(MEHSUL_KAT[x.ad]));
         const ickiler = so.mehsullar.filter(x => ICKILER.includes(MEHSUL_KAT[x.ad]));
-        
-        const mehsulCedveli = h('table', {style: 'margin-top:10px; width:100%;'},
-            h('thead', {}, h('tr', {}, h('th', {}, 'Məhsul'), h('th', {}, 'Miqdar'), h('th', {}, 'Qiymət'), h('th', {}, 'Məbləğ'))),
-            h('tbody', {}, 
-                ...(yemekler.length ? [
-                    h('tr', {}, h('td', {colspan: '4', style: 'color:#f39c12;font-weight:bold;padding:8px 0;'}, '🍽️ Yeməklər')),
-                    ...yemekler.map(x => h('tr', {},
-                        h('td', {}, x.ad), h('td', {}, x.miqdar), h('td', {}, pul(x.q)), h('td', {style: 'color:#e94560;'}, pul(x.q * x.miqdar))
-                    ))
-                ] : []),
-                ...(ickiler.length ? [
-                    h('tr', {}, h('td', {colspan: '4', style: 'color:#3498db;font-weight:bold;padding:8px 0;'}, '🥤 İçkilər')),
-                    ...ickiler.map(x => h('tr', {},
-                        h('td', {}, x.ad), h('td', {}, x.miqdar), h('td', {}, pul(x.q)), h('td', {style: 'color:#e94560;'}, pul(x.q * x.miqdar))
-                    ))
-                ] : [])
-            )
+        const mehsulCedveli = h('div', {style: 'margin-top:10px;'},
+            yemekler.length ? h('div', {}, h('div', {style: 'color:#f39c12;font-weight:bold;margin-bottom:5px;font-size:13px;'}, '🍽️ Yeməklər'),
+                ...yemekler.map(x => h('div', {style: 'display:flex;justify-content:space-between;padding:4px 0;font-size:13px;'}, h('span', {}, x.ad + ' x' + x.miqdar), h('span', {style: 'color:#e94560;'}, pul(x.q * x.miqdar))))) : null,
+            ickiler.length ? h('div', {style: 'margin-top:8px;'}, h('div', {style: 'color:#3498db;font-weight:bold;margin-bottom:5px;font-size:13px;'}, '🥤 İçkilər'),
+                ...ickiler.map(x => h('div', {style: 'display:flex;justify-content:space-between;padding:4px 0;font-size:13px;'}, h('span', {}, x.ad + ' x' + x.miqdar), h('span', {style: 'color:#e94560;'}, pul(x.q * x.miqdar))))) : null
         );
-        
         const btnler = h('div', {className: 'aktiv-masa-btnler', style: 'margin-top:15px;'},
-            so.status === 'gozlemede' ? h('button', {className: 'small-btn', style: 'background:#3498db;', onclick: () => ad_selfOrderStatus(so.id, 'qebul')}, '✅ Qəbul et') : null,
-            so.status === 'qebul' ? h('button', {className: 'small-btn', style: 'background:#9b59b6;', onclick: () => ad_selfOrderStatus(so.id, 'hazirlanir')}, '🍳 Hazırlanır') : null,
             so.status === 'hazirlanir' ? h('button', {className: 'small-btn', style: 'background:#2ecc71;', onclick: () => ad_selfOrderStatus(so.id, 'hazir')}, '🎉 Hazır') : null,
             so.status === 'hazir' ? h('button', {className: 'small-btn', style: 'background:#27ae60;', onclick: () => ad_selfOrderStatus(so.id, 'catdirildi')}, '📦 Çatdırıldı') : null,
-            (so.status !== 'legv' && so.status !== 'catdirildi') ? h('button', {className: 'small-btn', style: 'background:#e74c3c;', onclick: () => ad_selfOrderStatus(so.id, 'legv')}, '❌ Ləğv') : null
+            so.status !== 'legv' && so.status !== 'catdirildi' ? h('button', {className: 'small-btn', style: 'background:#e74c3c;', onclick: () => ad_selfOrderStatus(so.id, 'legv')}, '❌ Ləğv') : null
         );
-        
         el.appendChild(h('div', {className: 'aktiv-masa-kart', style: `border-color:${statusReng};`},
             h('div', {className: 'aktiv-masa-header'},
-                h('div', {},
-                    h('div', {className: 'aktiv-masa-ad', style: `color:${statusReng};`}, 
-                        so.tip === 'masa' ? `🍽️ ${so.masa_ad}` : `🚶 ${so.musteri_ad}`
-                    ),
-                    h('div', {className: 'aktiv-masa-info'}, 
-                        so.tip === 'masa' ? `Masa sifarişi` : `📞 ${so.musteri_tel}`
-                    ),
-                    h('div', {style: `display:inline-block; margin-top:8px; padding:4px 12px; border-radius:20px; background:${statusReng}25; border:1px solid ${statusReng}; color:${statusReng}; font-size:13px; font-weight:bold;`}, statusAd)
-                ),
-                h('div', {className: 'aktiv-masa-mebleg'}, pul(so.toplam))
-            ),
+                h('div', {}, h('div', {className: 'aktiv-masa-ad', style: `color:${statusReng};`}, so.tip === 'masa' ? `🍽️ ${so.masa_ad}` : `🚶 ${so.musteri_ad}`),
+                    h('div', {className: 'aktiv-masa-info'}, so.tip === 'masa' ? 'Masa sifarişi' : `📞 ${so.musteri_tel}`),
+                    h('div', {style: `display:inline-block; margin-top:8px; padding:4px 12px; border-radius:20px; background:${statusReng}25; border:1px solid ${statusReng}; color:${statusReng}; font-size:13px; font-weight:bold;`}, statusAd)),
+                h('div', {className: 'aktiv-masa-mebleg'}, pul(so.toplam))),
             mehsulCedveli, btnler
         ));
     });
-    toast('✅ Yeniləndi', 'info', 1500);
 }
+
+function ad_selfOrdersYukle() { ad_selfOrdersYukleSessiz(); }
 
 async function ad_selfOrderStatus(id, status) {
     try {
         await FB.update(DR('selfOrders/' + id), {status});
         toast('✅ Status yeniləndi', 'success');
-    } catch (err) {
-        toast('❌ Xəta: ' + err.message, 'error', 5000);
-    }
+    } catch (err) { toast('❌ Xəta: ' + err.message, 'error', 5000); }
     setTimeout(ad_selfOrdersYukle, 300);
 }
 
-// ============================================================
 // ALIŞLAR
-// ============================================================
 function ad_renderAlislar() {
     const c = document.getElementById('ad-p-alislar');
     c.innerHTML = '';
     c.appendChild(h('h3', {className: 's-title'}, '🛒 Bütün Alışlar'));
-    c.appendChild(h('div', {className: 'form'},
-        h('input', {type: 'date', id: 'ad-alisTarix', value: bugun()}),
-        h('button', {onclick: ad_alislariYukle}, '🔍 Göstər')));
+    c.appendChild(h('div', {className: 'form'}, h('input', {type: 'date', id: 'ad-alisTarix', value: bugun()}), h('button', {onclick: ad_alislariYukle}, '🔍 Göstər')));
+    c.appendChild(h('div', {className: 'form'}, yenileBtn(ad_alislariYukle)));
     c.appendChild(h('div', {className: 'stats'},
         h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-alisCemi'}, '0.00 ₼'), h('div', {className: 'l'}, 'Günlük Cəmi')),
         h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-alisSayi'}, '0'), h('div', {className: 'l'}, 'Alış Sayı'))));
-    c.appendChild(h('table', {},
-        h('thead', {}, h('tr', {}, ...['Mal', 'Qiymət', 'Miqdar', 'Cəmi', 'Qeyd', 'İşçi', 'Tarix', 'Sil'].map(t => h('th', {}, t)))),
-        h('tbody', {id: 'ad-alisTable'})));
+    c.appendChild(h('table', {}, h('thead', {}, h('tr', {}, ...['Mal', 'Qiymət', 'Miqdar', 'Cəmi', 'Qeyd', 'İşçi', 'Tarix', 'Sil'].map(t => h('th', {}, t)))), h('tbody', {id: 'ad-alisTable'})));
     ad_alislariYukle();
 }
 
@@ -1992,10 +1714,7 @@ function ad_alislariYukle() {
     document.getElementById('ad-alisSayi').textContent = alislar.length;
     const tb = document.getElementById('ad-alisTable');
     tb.innerHTML = '';
-    if (!alislar.length) {
-        tb.appendChild(h('tr', {}, h('td', {colspan: '8', style: 'text-align:center;color:#aaa;padding:20px;'}, 'Alış yoxdur')));
-        return;
-    }
+    if (!alislar.length) { tb.appendChild(h('tr', {}, h('td', {colspan: '8', style: 'text-align:center;color:#aaa;padding:20px;'}, 'Alış yoxdur'))); return; }
     alislar.sort((a, b) => b.id - a.id).forEach(a => tb.appendChild(h('tr', {},
         h('td', {}, a.mal_ad), h('td', {}, pul(a.qiymet)), h('td', {}, a.miqdar),
         h('td', {style: 'color:#2ecc71;font-weight:bold;'}, pul(a.cemi)), h('td', {}, a.qeyd || '-'),
@@ -2004,32 +1723,24 @@ function ad_alislariYukle() {
 }
 
 async function ad_alisSil(id) {
-    confirmDialog('Alışı silmək istəyirsiniz?', async cavab => {
+    confirmDialog('Silinsin?', async cavab => {
         if (!cavab) return;
-        try {
-            await FB.remove(DR('alislar/' + id));
-            toast('✅ Silindi', 'success');
-        } catch (err) {
-            toast('❌ Xəta: ' + err.message, 'error', 5000);
-        }
+        try { await FB.remove(DR('alislar/' + id)); toast('✅ Silindi', 'success'); }
+        catch (err) { toast('❌ Xəta', 'error'); }
         setTimeout(ad_alislariYukle, 300);
-    }, 'Alışı sil', '🗑️');
+    }, 'Sil', '🗑️');
 }
 
-// ENDİRİMLƏR
 function ad_renderEndirimler() {
     const c = document.getElementById('ad-p-endirimler');
     c.innerHTML = '';
     c.appendChild(h('h3', {className: 's-title'}, '💰 Endirimlər'));
-    c.appendChild(h('div', {className: 'form'},
-        h('input', {type: 'date', id: 'ad-endirimTarix', value: bugun()}),
-        h('button', {onclick: ad_endirimleriYukle}, '🔍 Göstər')));
+    c.appendChild(h('div', {className: 'form'}, h('input', {type: 'date', id: 'ad-endirimTarix', value: bugun()}), h('button', {onclick: ad_endirimleriYukle}, '🔍 Göstər')));
+    c.appendChild(h('div', {className: 'form'}, yenileBtn(ad_endirimleriYukle)));
     c.appendChild(h('div', {className: 'stats'},
         h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-endirimSayi'}, '0'), h('div', {className: 'l'}, 'Endirim Sayı')),
         h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-endirimCemi'}, '0.00 ₼'), h('div', {className: 'l'}, 'Ümumi Endirim'))));
-    c.appendChild(h('table', {},
-        h('thead', {}, h('tr', {}, ...['Masa/Paket', 'Müştəri', 'Faiz', 'Əvvəlki', 'Endirim', 'Yekun', 'İşçi', 'Tarix'].map(t => h('th', {}, t)))),
-        h('tbody', {id: 'ad-endirimTable'})));
+    c.appendChild(h('table', {}, h('thead', {}, h('tr', {}, ...['Masa/Paket', 'Müştəri', 'Faiz', 'Əvvəlki', 'Endirim', 'Yekun', 'İşçi', 'Tarix'].map(t => h('th', {}, t)))), h('tbody', {id: 'ad-endirimTable'})));
     ad_endirimleriYukle();
 }
 
@@ -2042,10 +1753,7 @@ function ad_endirimleriYukle() {
     document.getElementById('ad-endirimCemi').textContent = pul(cem(end, e => e.endirim));
     const tb = document.getElementById('ad-endirimTable');
     tb.innerHTML = '';
-    if (!end.length) {
-        tb.appendChild(h('tr', {}, h('td', {colspan: '8', style: 'text-align:center;color:#aaa;padding:20px;'}, 'Endirim yoxdur')));
-        return;
-    }
+    if (!end.length) { tb.appendChild(h('tr', {}, h('td', {colspan: '8', style: 'text-align:center;color:#aaa;padding:20px;'}, 'Endirim yoxdur'))); return; }
     end.slice().sort((a, b) => b.id - a.id).forEach(e => tb.appendChild(h('tr', {},
         h('td', {}, e.masa_ad), h('td', {style: 'color:#f39c12;font-weight:bold;'}, e.musteri_ad),
         h('td', {style: 'color:#e94560;font-weight:bold;'}, e.faiz + '%'), h('td', {}, pul(e.evvelki)),
@@ -2053,39 +1761,32 @@ function ad_endirimleriYukle() {
         h('td', {style: 'color:#2ecc71;font-weight:bold;'}, pul(e.yekun)), h('td', {}, e.isci_ad), h('td', {}, tarixFormat(e.tarix)))));
 }
 
-// ============================================================
-// HESABAT (Düzəliş 5: kart/nağd ayrımı)
-// ============================================================
+// HESABAT
 function ad_renderHesabat() {
     const c = document.getElementById('ad-p-hesabat');
     c.innerHTML = '';
     c.appendChild(h('h3', {className: 's-title'}, '📊 Günlük Hesabat'));
-    c.appendChild(h('div', {className: 'form'},
-        h('input', {type: 'date', id: 'ad-hesabatTarix', value: bugun()}),
-        h('button', {onclick: ad_hesabatYukle}, '🔍 Göstər')));
+    c.appendChild(h('div', {className: 'form'}, h('input', {type: 'date', id: 'ad-hesabatTarix', value: bugun()}), h('button', {onclick: ad_hesabatYukle}, '🔍 Göstər')));
+    c.appendChild(h('div', {className: 'form'}, yenileBtn(ad_hesabatYukle)));
     c.appendChild(h('div', {className: 'stats'},
         h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-umumiSatis'}, '0.00 ₼'), h('div', {className: 'l'}, 'Ümumi Satış')),
         h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-masaSatis'}, '0.00 ₼'), h('div', {className: 'l'}, '🍽️ Masa')),
         h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-paketSatis'}, '0.00 ₼'), h('div', {className: 'l'}, '📦 Paket')),
         h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-selfSatis'}, '0.00 ₼'), h('div', {className: 'l'}, '📱 QR Self'))));
-    c.appendChild(h('div', {className: 'stats'}, 
+    c.appendChild(h('div', {className: 'stats'},
         h('div', {className: 'stat', style: 'border-color:rgba(52,152,219,0.4);'}, h('div', {className: 'v', id: 'ad-kartSatis'}, '0.00 ₼'), h('div', {className: 'l'}, '💳 Kart')),
         h('div', {className: 'stat', style: 'border-color:rgba(39,174,96,0.4);'}, h('div', {className: 'v', id: 'ad-nagdSatis'}, '0.00 ₼'), h('div', {className: 'l'}, '💵 Nağd')),
-        h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-sifarisSayi'}, '0'), h('div', {className: 'l'}, 'Sifariş Sayı')),
-        h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-endirimliSayi'}, '0'), h('div', {className: 'l'}, 'Endirimli'))));
-    c.appendChild(h('div', {className: 'form'}, yenileBtn(ad_hesabatYukle)));
+        h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-sifarisSayi'}, '0'), h('div', {className: 'l'}, 'Sifariş Sayı'))));
     c.appendChild(h('h4', {className: 'bolme-basliq'}, '🍽️ Masa Sifarişləri (İşçi üzrə)'));
-    c.appendChild(h('table', {},
-        h('thead', {}, h('tr', {}, ...['Ad', 'Kod', 'Rol', 'Masa', 'Alış', 'Endirim', 'Ümumi'].map(t => h('th', {}, t)))),
-        h('tbody', {id: 'ad-hesabatTable'})));
+    c.appendChild(h('table', {}, h('thead', {}, h('tr', {}, ...['Ad', 'Kod', 'Rol', 'Masa', 'Alış', 'Endirim', 'Ümumi'].map(t => h('th', {}, t)))), h('tbody', {id: 'ad-hesabatTable'})));
     c.appendChild(h('h4', {className: 'bolme-basliq paket-basliq'}, '📦 Paket Sifarişləri'));
     c.appendChild(h('div', {id: 'ad-hesabatPaketWrap'}));
-    c.appendChild(h('h4', {className: 'bolme-basliq', style: 'background:rgba(52,152,219,0.15);border-left-color:#3498db;'}, '📱 QR Self-Order Sifarişləri'));
+    c.appendChild(h('h4', {className: 'bolme-basliq', style: 'background:rgba(52,152,219,0.15);border-left-color:#3498db;'}, '📱 QR Self-Order'));
     c.appendChild(h('div', {id: 'ad-hesabatSelfWrap'}));
     ad_hesabatYukle();
 }
 
-function ad_hesabatYukle() {
+function ad_hesabatYukleSessiz() {
     const el = document.getElementById('ad-hesabatTarix');
     if (!el) return;
     const t = el.value;
@@ -2098,13 +1799,10 @@ function ad_hesabatYukle() {
 
     let umumi = 0, masaSatis = 0, paketSatis = 0, selfSatis = 0, endirimli = 0;
     let kartSatis = 0, nagdSatis = 0;
-    
-    // Masa və paket ödənişlərini yoxla
     sess.forEach(s => {
         if (s.odenis_novu === 'kart') kartSatis += s.yekun || 0;
         else if (s.odenis_novu === 'nagd') nagdSatis += s.yekun || 0;
     });
-    
     const netice = isciler.map(i => {
         const ms = sif.filter(s => s.isci_id === i.id && s.masa_id !== null);
         const ps = sess.filter(s => s.isci_id === i.id && s.tip === 'paket');
@@ -2116,24 +1814,22 @@ function ad_hesabatYukle() {
         if (en.length) endirimli++;
         return {i, ms, as, en, mm, am: cem(as, a => a.cemi), endM: cem(en, e => e.endirim), umumi: mm + pm};
     }).sort((a, b) => b.umumi - a.umumi);
-    
     selfSatis = cem(self, s => s.toplam);
     umumi += selfSatis;
 
-    document.getElementById('ad-umumiSatis').textContent = pul(umumi);
-    document.getElementById('ad-masaSatis').textContent = pul(masaSatis);
-    document.getElementById('ad-paketSatis').textContent = pul(paketSatis);
-    document.getElementById('ad-selfSatis').textContent = pul(selfSatis);
-    document.getElementById('ad-kartSatis').textContent = pul(kartSatis);
-    document.getElementById('ad-nagdSatis').textContent = pul(nagdSatis);
-    document.getElementById('ad-sifarisSayi').textContent = sif.length + self.length;
-    document.getElementById('ad-endirimliSayi').textContent = endirimli;
+    const set = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+    set('ad-umumiSatis', pul(umumi));
+    set('ad-masaSatis', pul(masaSatis));
+    set('ad-paketSatis', pul(paketSatis));
+    set('ad-selfSatis', pul(selfSatis));
+    set('ad-kartSatis', pul(kartSatis));
+    set('ad-nagdSatis', pul(nagdSatis));
+    set('ad-sifarisSayi', sif.length + self.length);
 
     const tb = document.getElementById('ad-hesabatTable');
     tb.innerHTML = '';
-    if (!netice.length) {
-        tb.appendChild(h('tr', {}, h('td', {colspan: '7', style: 'text-align:center;color:#aaa;padding:20px;'}, 'Yoxdur')));
-    } else {
+    if (!netice.length) tb.appendChild(h('tr', {}, h('td', {colspan: '7', style: 'text-align:center;color:#aaa;padding:20px;'}, 'Yoxdur')));
+    else {
         const icons = {kassir: '💰', ofisiant: '🍽️', paketci: '📦'};
         netice.forEach(n => tb.appendChild(h('tr', {},
             h('td', {}, n.i.ad), h('td', {}, n.i.kod), h('td', {}, (icons[n.i.rol] || '') + ' ' + n.i.rol),
@@ -2143,13 +1839,11 @@ function ad_hesabatYukle() {
             h('td', {style: 'color:#2ecc71;font-weight:bold;'}, pul(n.umumi)))));
     }
 
-    // Paket cədvəli
     const pw = document.getElementById('ad-hesabatPaketWrap');
     pw.innerHTML = '';
     const paketler = DATA.sessiyalar.filter(s => s.tip === 'paket' && gun(s.baslama) === t);
-    if (!paketler.length) {
-        pw.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:20px;'}, 'Bu tarixdə paket yoxdur'));
-    } else {
+    if (!paketler.length) pw.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:20px;'}, 'Paket yoxdur'));
+    else {
         const tbody = h('tbody', {});
         paketler.slice().sort((a, b) => b.id - a.id).forEach(p => {
             const odenisAd = p.odenis_novu === 'kart' ? '💳 Kart' : (p.odenis_novu === 'nagd' ? '💵 Nağd' : '⏳');
@@ -2159,21 +1853,16 @@ function ad_hesabatYukle() {
                 h('td', {}, p.unvan || '-'), h('td', {}, p.isci_ad),
                 h('td', {style: 'color:#2ecc71;font-weight:bold;'}, pul(p.yekun)),
                 h('td', {}, odenisAd),
-                h('td', {style: p.endirim_mebleg > 0 ? 'color:#e94560;' : ''}, p.endirim_mebleg > 0 ? `-${p.endirim_faiz}%` : '-'),
                 h('td', {}, p.status === 'aktiv' ? '🟡 Aktiv' : '🟢 Bağlı')
             ));
         });
-        pw.appendChild(h('table', {},
-            h('thead', {}, h('tr', {}, ...['Nömrə', 'Müştəri', 'Telefon', 'Ünvan', 'İşçi', 'Məbləğ', 'Ödəniş', 'Endirim', 'Status'].map(t => h('th', {}, t)))),
-            tbody));
+        pw.appendChild(h('table', {}, h('thead', {}, h('tr', {}, ...['Nömrə', 'Müştəri', 'Telefon', 'Ünvan', 'İşçi', 'Məbləğ', 'Ödəniş', 'Status'].map(t => h('th', {}, t)))), tbody));
     }
-    
-    // Self-Order cədvəli
+
     const sw = document.getElementById('ad-hesabatSelfWrap');
     sw.innerHTML = '';
-    if (!self.length) {
-        sw.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:20px;'}, 'Bu tarixdə QR sifarişi yoxdur'));
-    } else {
+    if (!self.length) sw.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:20px;'}, 'QR sifariş yoxdur'));
+    else {
         const tbody = h('tbody', {});
         self.slice().sort((a, b) => b.id - a.id).forEach(s => tbody.appendChild(h('tr', {},
             h('td', {}, s.tip === 'masa' ? '🍽️ ' + s.masa_ad : '🚶 Özümlə'),
@@ -2183,16 +1872,13 @@ function ad_hesabatYukle() {
             h('td', {}, s.mehsullar.map(x => `${x.ad} x${x.miqdar}`).join(', ')),
             h('td', {}, tarixFormat(s.tarix))
         )));
-        sw.appendChild(h('table', {},
-            h('thead', {}, h('tr', {}, ...['Tip', 'Müştəri', 'Telefon', 'Məbləğ', 'Məhsullar', 'Tarix'].map(t => h('th', {}, t)))),
-            tbody));
+        sw.appendChild(h('table', {}, h('thead', {}, h('tr', {}, ...['Tip', 'Müştəri', 'Telefon', 'Məbləğ', 'Məhsullar', 'Tarix'].map(t => h('th', {}, t)))), tbody));
     }
-    toast('✅ Hesabat yeniləndi', 'info', 1500);
 }
 
-// ============================================================
+function ad_hesabatYukle() { ad_hesabatYukleSessiz(); }
+
 // QRAFİKLƏR
-// ============================================================
 function ad_renderQrafikler() {
     const c = document.getElementById('ad-p-qrafikler');
     c.innerHTML = '';
@@ -2222,208 +1908,181 @@ function ad_qrafikYukle() {
     const sif = DATA.sifarisler, sess = DATA.sessiyalar, alislar = DATA.alislar;
     const end = DATA.endirimler, isciler = DATA.isciler.filter(i => i.rol !== 'admin');
     const self = DATA.selfOrders.filter(s => s.status !== 'legv');
+    const son7 = fn => { const r = []; for (let i = 6; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); r.push({tarix: d.toLocaleDateString('az-AZ', {weekday: 'short'}) + ' ' + d.getDate(), mebleg: fn(gun(d))}); } return r; };
+    const xett = (key, id, data, label, renk, fill) => cz(key, id, {type: 'line', data: {labels: data.map(d => d.tarix), datasets: [{label, data: data.map(d => d.mebleg), borderColor: renk, backgroundColor: fill, borderWidth: 3, fill: true, tension: 0.4}]}, options: {...sade, plugins: {legend: {labels: {color: '#fff'}}}, scales: OXLAR}});
+    const sutun = (key, id, data, label, renk) => cz(key, id, {type: 'bar', data: {labels: data.map(d => d.tarix), datasets: [{label, data: data.map(d => d.mebleg), backgroundColor: renk, borderRadius: 8}]}, options: {...sade, plugins: {legend: {display: false}}, scales: OXLAR}});
 
-    const son7 = fn => {
-        const r = [];
-        for (let i = 6; i >= 0; i--) {
-            const d = new Date(); d.setDate(d.getDate() - i);
-            r.push({tarix: d.toLocaleDateString('az-AZ', {weekday: 'short'}) + ' ' + d.getDate(), mebleg: fn(gun(d))});
-        }
-        return r;
-    };
-    const xett = (key, id, data, label, renk, fill) => cz(key, id, {
-        type: 'line',
-        data: {labels: data.map(d => d.tarix), datasets: [{label, data: data.map(d => d.mebleg), borderColor: renk, backgroundColor: fill, borderWidth: 3, fill: true, tension: 0.4}]},
-        options: {...sade, plugins: {legend: {labels: {color: '#fff'}}}, scales: OXLAR}
-    });
-    const sutun = (key, id, data, label, renk) => cz(key, id, {
-        type: 'bar',
-        data: {labels: data.map(d => d.tarix), datasets: [{label, data: data.map(d => d.mebleg), backgroundColor: renk, borderRadius: 8}]},
-        options: {...sade, plugins: {legend: {display: false}}, scales: OXLAR}
-    });
-
-    xett('umumi', 'ad-umumiChart',
-        son7(t => cem(sif.filter(s => gun(s.tarix) === t), s => s.mebleg) - cem(end.filter(e => gun(e.tarix) === t), e => e.endirim) + cem(self.filter(s => gun(s.tarix) === t), s => s.toplam)),
-        'Satış (₼)', '#e94560', 'rgba(233,69,96,0.3)');
+    xett('umumi', 'ad-umumiChart', son7(t => cem(sif.filter(s => gun(s.tarix) === t), s => s.mebleg) - cem(end.filter(e => gun(e.tarix) === t), e => e.endirim) + cem(self.filter(s => gun(s.tarix) === t), s => s.toplam)), 'Satış (₼)', '#e94560', 'rgba(233,69,96,0.3)');
 
     const isciData = isciler.map(i => ({ad: i.ad, mebleg: cem(sif.filter(s => s.isci_id === i.id), s => s.mebleg) - cem(end.filter(e => e.isci_id === i.id), e => e.endirim)})).filter(i => i.mebleg > 0);
-    cz('isci', 'ad-isciChart', {
-        type: 'bar',
-        data: {labels: isciData.length ? isciData.map(i => i.ad) : ['Yoxdur'], datasets: [{label: 'Satış (₼)', data: isciData.length ? isciData.map(i => i.mebleg) : [0], backgroundColor: isciData.map((_, i) => PALET[i % 10]), borderRadius: 8}]},
-        options: {...sade, plugins: {legend: {display: false}}, scales: {y: OXLAR.y, x: {ticks: {color: '#fff'}}}}
-    });
-    cz('pay', 'ad-payChart', {
-        type: 'doughnut',
-        data: {labels: isciData.length ? isciData.map(i => i.ad) : ['Yoxdur'], datasets: [{data: isciData.length ? isciData.map(i => i.mebleg) : [1], backgroundColor: isciData.length ? PALET : ['#333'], borderColor: '#1a1a2e', borderWidth: 3}]},
-        options: {...sade, plugins: {legend: {position: 'bottom', labels: {color: '#fff'}}}}
-    });
+    cz('isci', 'ad-isciChart', {type: 'bar', data: {labels: isciData.length ? isciData.map(i => i.ad) : ['Yoxdur'], datasets: [{label: 'Satış (₼)', data: isciData.length ? isciData.map(i => i.mebleg) : [0], backgroundColor: isciData.map((_, i) => PALET[i % 10]), borderRadius: 8}]}, options: {...sade, plugins: {legend: {display: false}}, scales: {y: OXLAR.y, x: {ticks: {color: '#fff'}}}}});
+    cz('pay', 'ad-payChart', {type: 'doughnut', data: {labels: isciData.length ? isciData.map(i => i.ad) : ['Yoxdur'], datasets: [{data: isciData.length ? isciData.map(i => i.mebleg) : [1], backgroundColor: isciData.length ? PALET : ['#333'], borderColor: '#1a1a2e', borderWidth: 3}]}, options: {...sade, plugins: {legend: {position: 'bottom', labels: {color: '#fff'}}}}});
 
-    const qrup = {};
-    sif.forEach(s => { qrup[s.mehsul_ad] = (qrup[s.mehsul_ad] || 0) + s.miqdar; });
+    const qrup = {}; sif.forEach(s => { qrup[s.mehsul_ad] = (qrup[s.mehsul_ad] || 0) + s.miqdar; });
     const top = Object.entries(qrup).map(([ad, m]) => ({ad, m})).sort((a, b) => b.m - a.m).slice(0, 10);
-    cz('mehsul', 'ad-mehsulChart', {
-        type: 'bar',
-        data: {labels: top.length ? top.map(x => x.ad) : ['Yoxdur'], datasets: [{label: 'Miqdar', data: top.length ? top.map(x => x.m) : [0], backgroundColor: top.map((_, i) => PALET[i % 10]), borderRadius: 8}]},
-        options: {...sade, indexAxis: 'y', plugins: {legend: {display: false}}, scales: {x: OXLAR.y, y: {ticks: {color: '#fff'}}}}
-    });
+    cz('mehsul', 'ad-mehsulChart', {type: 'bar', data: {labels: top.length ? top.map(x => x.ad) : ['Yoxdur'], datasets: [{label: 'Miqdar', data: top.length ? top.map(x => x.m) : [0], backgroundColor: top.map((_, i) => PALET[i % 10]), borderRadius: 8}]}, options: {...sade, indexAxis: 'y', plugins: {legend: {display: false}}, scales: {x: OXLAR.y, y: {ticks: {color: '#fff'}}}}});
 
-    const kat = {};
-    sif.forEach(s => { const k = MEHSUL_KAT[s.mehsul_ad] || 'Digər'; kat[k] = (kat[k] || 0) + s.mebleg; });
+    const kat = {}; sif.forEach(s => { const k = MEHSUL_KAT[s.mehsul_ad] || 'Digər'; kat[k] = (kat[k] || 0) + s.mebleg; });
     const kl = Object.keys(kat);
-    cz('kateqoriya', 'ad-kateqoriyaChart', {
-        type: 'pie',
-        data: {labels: kl.length ? kl : ['Yoxdur'], datasets: [{data: kl.length ? Object.values(kat) : [1], backgroundColor: PALET, borderColor: '#1a1a2e', borderWidth: 3}]},
-        options: {...sade, plugins: {legend: {position: 'bottom', labels: {color: '#fff'}}}}
-    });
+    cz('kateqoriya', 'ad-kateqoriyaChart', {type: 'pie', data: {labels: kl.length ? kl : ['Yoxdur'], datasets: [{data: kl.length ? Object.values(kat) : [1], backgroundColor: PALET, borderColor: '#1a1a2e', borderWidth: 3}]}, options: {...sade, plugins: {legend: {position: 'bottom', labels: {color: '#fff'}}}}});
 
     sutun('paket', 'ad-paketChart', son7(t => cem(sess.filter(s => s.tip === 'paket' && gun(s.baslama) === t), p => p.yekun)), 'Paket (₼)', '#f39c12');
     xett('alis', 'ad-alisChart', son7(t => cem(alislar.filter(a => gun(a.tarix) === t), a => a.cemi)), 'Alış (₼)', '#e74c3c', 'rgba(231,76,60,0.2)');
     sutun('self', 'ad-selfChart', son7(t => cem(self.filter(s => gun(s.tarix) === t), s => s.toplam)), 'QR Self-Order (₼)', '#3498db');
-    toast('✅ Qrafiklər yeniləndi', 'info', 1500);
 }
 
-// ============================================================
-// Düzəliş 7: MENYU İDARƏETMƏSİ
-// ============================================================
-function ad_renderMenyu() {
-    const c = document.getElementById('ad-p-menyu');
+// Düzəliş 3: Menyu → Ayarların içində
+function ad_renderAyarlar() {
+    const c = document.getElementById('ad-p-ayarlar');
     c.innerHTML = '';
-    c.appendChild(h('h3', {className: 's-title'}, '🍽️ Menyu İdarəetməsi'));
-    c.appendChild(h('div', {className: 'form'}, yenileBtn(ad_menyuYukle)));
+    c.appendChild(h('h3', {className: 's-title'}, '⚙️ Ayarlar'));
+    c.appendChild(h('div', {className: 'form'}, yenileBtn(ad_ayarlarYukle)));
     
-    // Yeni kateqoriya
-    c.appendChild(h('div', {style: 'background:rgba(243,156,18,0.1);border:2px solid rgba(243,156,18,0.3);border-radius:12px;padding:20px;margin-bottom:20px;'},
-        h('h4', {style: 'color:#f39c12;margin-bottom:15px;'}, '➕ Yeni Kateqoriya'),
+    // Admin kodu dəyiş
+    c.appendChild(h('div', {style: 'background:rgba(233,69,96,0.1);border:2px solid rgba(233,69,96,0.3);border-radius:12px;padding:20px;margin-bottom:20px;'},
+        h('h4', {style: 'color:#e94560;margin-bottom:15px;'}, '🔑 Admin Kodu Dəyiş'),
         h('div', {className: 'form'},
-            h('input', {type: 'text', id: 'yeniKatAd', placeholder: 'Kateqoriya adı (məs: Fast Food)'}),
-            h('select', {id: 'yeniKatTip'},
-                h('option', {value: 'yemek'}, '🍽️ Yemək kateqoriyası'),
-                h('option', {value: 'icki'}, '🥤 İçki kateqoriyası')
-            ),
-            h('button', {onclick: ad_kateqoriyaElaveEt}, '+ Əlavə et')
-        )
+            h('input', {type: 'text', id: 'ad-adminYeniKod', placeholder: 'Yeni kod (min 4 rəqəm)', maxlength: '10'}),
+            h('input', {type: 'text', id: 'ad-adminYeniAd', placeholder: 'Yeni ad'}),
+            h('button', {onclick: ad_adminOzKodDeyis}, '💾 Yadda saxla')
+        ),
+        h('p', {id: 'ad-adminAyarMesaj', style: 'margin-top:10px;font-size:14px;'})
     ));
     
-    // Yeni yemək
-    c.appendChild(h('div', {style: 'background:rgba(39,174,96,0.1);border:2px solid rgba(39,174,96,0.3);border-radius:12px;padding:20px;margin-bottom:20px;'},
-        h('h4', {style: 'color:#2ecc71;margin-bottom:15px;'}, '➕ Yeni Yemək/İçki'),
-        h('div', {className: 'form'},
-            h('input', {type: 'text', id: 'yeniMehsulAd', placeholder: 'Yemək adı'}),
-            h('input', {type: 'number', id: 'yeniMehsulQiymet', placeholder: 'Qiymət', step: '0.01'}),
-            h('select', {id: 'yeniMehsulKat'}, 
-                ...Object.keys(MENYU).map(k => h('option', {value: k}, k))
-            ),
-            h('button', {onclick: ad_mehsulElaveEt}, '+ Əlavə et')
-        )
+    // Düzəliş 3: Menyu idarəetməsi ayarların içində
+    c.appendChild(h('div', {style: 'background:rgba(243,156,18,0.1);border:2px solid rgba(243,156,18,0.3);border-radius:12px;padding:20px;'},
+        h('h4', {style: 'color:#f39c12;margin-bottom:15px;'}, '🍽️ Menyu İdarəetməsi'),
+        
+        // Yeni kateqoriya
+        h('div', {style: 'margin-bottom:20px;'},
+            h('h5', {style: 'color:#fff;margin-bottom:10px;font-size:15px;'}, '➕ Yeni Kateqoriya'),
+            h('div', {className: 'form'},
+                h('input', {type: 'text', id: 'yeniKatAd', placeholder: 'Kateqoriya adı'}),
+                h('select', {id: 'yeniKatTip'}, h('option', {value: 'yemek'}, '🍽️ Yemək'), h('option', {value: 'icki'}, '🥤 İçki')),
+                h('button', {onclick: ad_kateqoriyaElaveEt}, '+ Əlavə et')
+            )
+        ),
+        
+        // Yeni yemək
+        h('div', {style: 'margin-bottom:20px;'},
+            h('h5', {style: 'color:#fff;margin-bottom:10px;font-size:15px;'}, '➕ Yeni Məhsul'),
+            h('div', {className: 'form'},
+                h('input', {type: 'text', id: 'yeniMehsulAd', placeholder: 'Məhsul adı'}),
+                h('input', {type: 'number', id: 'yeniMehsulQiymet', placeholder: 'Qiymət', step: '0.01'}),
+                h('select', {id: 'yeniMehsulKat'}, ...Object.keys(MENYU).map(k => h('option', {value: k}, k))),
+                h('button', {onclick: ad_mehsulElaveEt}, '+ Əlavə et')
+            )
+        ),
+        
+        // Düzəliş 3: Yeməklər və İçkilər ayrı
+        h('h5', {style: 'color:#f39c12;margin-top:20px;margin-bottom:10px;font-size:16px;'}, '🍽️ Yeməklər'),
+        h('div', {id: 'ad-yemeklerList'}),
+        
+        h('h5', {style: 'color:#3498db;margin-top:20px;margin-bottom:10px;font-size:16px;'}, '🥤 İçkilər'),
+        h('div', {id: 'ad-ickilerList'})
     ));
     
-    // Mövcud menyu
-    c.appendChild(h('h4', {className: 'bolme-basliq', style: 'margin-top:30px;'}, '📋 Mövcud Menyu'));
-    c.appendChild(h('div', {id: 'ad-menyuList'}));
-    
-    ad_menyuYukle();
+    ad_ayarlarYukle();
 }
 
-function ad_menyuYukle() {
-    const el = document.getElementById('ad-menyuList');
-    if (!el) return;
-    el.innerHTML = '';
-    
-    Object.entries(MENYU).forEach(([kat, mehsullar]) => {
-        const katDiv = h('div', {style: 'background:rgba(255,255,255,0.05);border-radius:12px;padding:15px;margin-bottom:15px;border:1px solid rgba(255,255,255,0.1);'},
-            h('div', {style: 'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;'},
-                h('h5', {style: 'color:#e94560;font-size:16px;margin:0;'}, kat + ' (' + Object.keys(mehsullar).length + ')'),
-                h('button', {className: 'small-btn del-b', onclick: () => ad_kateqoriyaSil(kat)}, '🗑️ Kateqoriyanı sil')
-            )
-        );
-        
-        const mehsulList = h('div', {style: 'display:grid;gap:8px;'});
-        Object.entries(mehsullar).forEach(([ad, qiymet]) => {
-            const stokdaYox = MENYU_STOK[ad] === true;
-            mehsulList.appendChild(h('div', {
-                style: `display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;background:rgba(0,0,0,0.3);${stokdaYox ? 'opacity:0.5;' : ''}`
-            },
-                h('div', {style: 'flex:1;'},
-                    h('span', {style: 'font-weight:600;'}, ad + (stokdaYox ? ' ❌' : '')),
-                    h('span', {style: 'color:#aaa;font-size:13px;margin-left:8px;'}, pul(qiymet))
-                ),
-                h('div', {style: 'display:flex;gap:5px;'},
-                    h('button', {className: 'small-btn', style: `background:${stokdaYox ? '#27ae60' : '#f39c12'};font-size:11px;`, onclick: () => ad_stokDeyis(ad)}, stokdaYox ? '✅ Stokda' : '❌ Stokda yox'),
-                    h('button', {className: 'small-btn edit-b', onclick: () => ad_mehsulDuzelis(kat, ad)}, '✏️'),
-                    h('button', {className: 'small-btn del-b', onclick: () => ad_mehsulSil(kat, ad)}, '🗑️')
+function ad_ayarlarYukle() {
+    // Yeməklər
+    const yemEl = document.getElementById('ad-yemeklerList');
+    if (yemEl) {
+        yemEl.innerHTML = '';
+        YEMEKLER.forEach(kat => {
+            if (!MENYU[kat]) return;
+            const katDiv = h('div', {style: 'background:rgba(255,255,255,0.05);border-radius:12px;padding:15px;margin-bottom:15px;border:1px solid rgba(255,255,255,0.1);'},
+                h('div', {style: 'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;'},
+                    h('h5', {style: 'color:#f39c12;font-size:15px;margin:0;'}, kat + ' (' + Object.keys(MENYU[kat]).length + ')'),
+                    h('button', {className: 'small-btn del-b', onclick: () => ad_kateqoriyaSil(kat)}, '🗑️')
                 )
-            ));
+            );
+            const mehsulList = h('div', {style: 'display:grid;gap:8px;'});
+            Object.entries(MENYU[kat]).forEach(([ad, qiymet]) => {
+                const stokdaYox = MENYU_STOK[ad] === true;
+                mehsulList.appendChild(h('div', {style: `display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;background:rgba(0,0,0,0.3);${stokdaYox ? 'opacity:0.5;' : ''}`},
+                    h('div', {style: 'flex:1;'}, h('span', {style: 'font-weight:600;'}, ad + (stokdaYox ? ' ❌' : '')), h('span', {style: 'color:#aaa;font-size:13px;margin-left:8px;'}, pul(qiymet))),
+                    h('div', {style: 'display:flex;gap:5px;'},
+                        h('button', {className: 'small-btn', style: `background:${stokdaYox ? '#27ae60' : '#f39c12'};font-size:11px;`, onclick: () => ad_stokDeyis(ad)}, stokdaYox ? '✅' : '❌'),
+                        h('button', {className: 'small-btn edit-b', onclick: () => ad_mehsulDuzelis(kat, ad)}, '✏️'),
+                        h('button', {className: 'small-btn del-b', onclick: () => ad_mehsulSil(kat, ad)}, '🗑️')
+                    )
+                ));
+            });
+            katDiv.appendChild(mehsulList);
+            yemEl.appendChild(katDiv);
         });
-        katDiv.appendChild(mehsulList);
-        el.appendChild(katDiv);
-    });
-    toast('✅ Menyu yeniləndi', 'info', 1500);
+    }
+    
+    // İçkilər
+    const ickEl = document.getElementById('ad-ickilerList');
+    if (ickEl) {
+        ickEl.innerHTML = '';
+        ICKILER.forEach(kat => {
+            if (!MENYU[kat]) return;
+            const katDiv = h('div', {style: 'background:rgba(255,255,255,0.05);border-radius:12px;padding:15px;margin-bottom:15px;border:1px solid rgba(255,255,255,0.1);'},
+                h('div', {style: 'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;'},
+                    h('h5', {style: 'color:#3498db;font-size:15px;margin:0;'}, kat + ' (' + Object.keys(MENYU[kat]).length + ')'),
+                    h('button', {className: 'small-btn del-b', onclick: () => ad_kateqoriyaSil(kat)}, '🗑️')
+                )
+            );
+            const mehsulList = h('div', {style: 'display:grid;gap:8px;'});
+            Object.entries(MENYU[kat]).forEach(([ad, qiymet]) => {
+                const stokdaYox = MENYU_STOK[ad] === true;
+                mehsulList.appendChild(h('div', {style: `display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;background:rgba(0,0,0,0.3);${stokdaYox ? 'opacity:0.5;' : ''}`},
+                    h('div', {style: 'flex:1;'}, h('span', {style: 'font-weight:600;'}, ad + (stokdaYox ? ' ❌' : '')), h('span', {style: 'color:#aaa;font-size:13px;margin-left:8px;'}, pul(qiymet))),
+                    h('div', {style: 'display:flex;gap:5px;'},
+                        h('button', {className: 'small-btn', style: `background:${stokdaYox ? '#27ae60' : '#f39c12'};font-size:11px;`, onclick: () => ad_stokDeyis(ad)}, stokdaYox ? '✅' : '❌'),
+                        h('button', {className: 'small-btn edit-b', onclick: () => ad_mehsulDuzelis(kat, ad)}, '✏️'),
+                        h('button', {className: 'small-btn del-b', onclick: () => ad_mehsulSil(kat, ad)}, '🗑️')
+                    )
+                ));
+            });
+            katDiv.appendChild(mehsulList);
+            ickEl.appendChild(katDiv);
+        });
+    }
 }
 
 async function ad_kateqoriyaElaveEt() {
     const ad = document.getElementById('yeniKatAd').value.trim();
-    const tip = document.getElementById('yeniKatTip').value;
-    if (!ad) { toast('❌ Kateqoriya adı lazımdır!', 'error'); return; }
-    if (MENYU[ad]) { toast('❌ Bu kateqoriya mövcuddur!', 'error'); return; }
-    
+    if (!ad) { toast('❌ Ad lazımdır!', 'error'); return; }
+    if (MENYU[ad]) { toast('❌ Mövcuddur!', 'error'); return; }
     MENYU[ad] = {};
     menyuYenile();
     await FB.set(DR('menyu'), MENYU);
     document.getElementById('yeniKatAd').value = '';
     toast('✅ Kateqoriya əlavə edildi!', 'success');
-    ad_menyuYukle();
-    // Kateqoriya select-i yenilə
-    setTimeout(() => {
-        const sel = document.getElementById('yeniMehsulKat');
-        if (sel) {
-            sel.innerHTML = '';
-            Object.keys(MENYU).forEach(k => {
-                const opt = document.createElement('option');
-                opt.value = k; opt.textContent = k;
-                sel.appendChild(opt);
-            });
-        }
-    }, 200);
+    ad_ayarlarYukle();
 }
 
 async function ad_kateqoriyaSil(kat) {
-    confirmDialog(`"${kat}" kateqoriyasını silmək istəyirsiniz?`, async cavab => {
+    confirmDialog(`"${kat}" silinsin?`, async cavab => {
         if (!cavab) return;
         delete MENYU[kat];
         menyuYenile();
         await FB.set(DR('menyu'), MENYU);
-        toast('✅ Kateqoriya silindi', 'success');
-        ad_menyuYukle();
-        setTimeout(() => {
-            const sel = document.getElementById('yeniMehsulKat');
-            if (sel) {
-                sel.innerHTML = '';
-                Object.keys(MENYU).forEach(k => {
-                    const opt = document.createElement('option');
-                    opt.value = k; opt.textContent = k;
-                    sel.appendChild(opt);
-                });
-            }
-        }, 200);
-    }, 'Kateqoriyanı sil', '🗑️');
+        toast('✅ Silindi', 'success');
+        ad_ayarlarYukle();
+    }, 'Sil', '🗑️');
 }
 
 async function ad_mehsulElaveEt() {
     const ad = document.getElementById('yeniMehsulAd').value.trim();
     const qiymet = parseFloat(document.getElementById('yeniMehsulQiymet').value);
     const kat = document.getElementById('yeniMehsulKat').value;
-    if (!ad) { toast('❌ Məhsul adı lazımdır!', 'error'); return; }
+    if (!ad) { toast('❌ Ad lazımdır!', 'error'); return; }
     if (!qiymet || qiymet <= 0) { toast('❌ Qiymət lazımdır!', 'error'); return; }
-    if (!MENYU[kat]) { toast('❌ Kateqoriya tapılmadı!', 'error'); return; }
-    if (MENYU[kat][ad]) { toast('❌ Bu məhsul mövcuddur!', 'error'); return; }
-    
+    if (!MENYU[kat]) { toast('❌ Kateqoriya yoxdur!', 'error'); return; }
+    if (MENYU[kat][ad]) { toast('❌ Mövcuddur!', 'error'); return; }
     MENYU[kat][ad] = qiymet;
     menyuYenile();
     await FB.set(DR('menyu'), MENYU);
     document.getElementById('yeniMehsulAd').value = '';
     document.getElementById('yeniMehsulQiymet').value = '';
     toast('✅ Məhsul əlavə edildi!', 'success');
-    ad_menyuYukle();
+    ad_ayarlarYukle();
 }
 
 async function ad_mehsulDuzelis(kat, ad) {
@@ -2431,48 +2090,33 @@ async function ad_mehsulDuzelis(kat, ad) {
     if (!yeniAd) return;
     const yeniQiymet = parseFloat(prompt('Yeni qiymət:', MENYU[kat][ad]));
     if (!yeniQiymet || yeniQiymet <= 0) return;
-    
     if (yeniAd !== ad) {
-        if (MENYU[kat][yeniAd]) { toast('❌ Bu ad mövcuddur!', 'error'); return; }
+        if (MENYU[kat][yeniAd]) { toast('❌ Ad mövcuddur!', 'error'); return; }
         delete MENYU[kat][ad];
     }
     MENYU[kat][yeniAd] = yeniQiymet;
     menyuYenile();
     await FB.set(DR('menyu'), MENYU);
-    toast('✅ Məhsul yeniləndi!', 'success');
-    ad_menyuYukle();
+    toast('✅ Yeniləndi!', 'success');
+    ad_ayarlarYukle();
 }
 
 async function ad_mehsulSil(kat, ad) {
-    confirmDialog(`"${ad}" məhsulunu silmək istəyirsiniz?`, async cavab => {
+    confirmDialog(`"${ad}" silinsin?`, async cavab => {
         if (!cavab) return;
         delete MENYU[kat][ad];
         menyuYenile();
         await FB.set(DR('menyu'), MENYU);
-        toast('✅ Məhsul silindi', 'success');
-        ad_menyuYukle();
-    }, 'Məhsulu sil', '🗑️');
+        toast('✅ Silindi', 'success');
+        ad_ayarlarYukle();
+    }, 'Sil', '🗑️');
 }
 
 async function ad_stokDeyis(ad) {
     MENYU_STOK[ad] = !MENYU_STOK[ad];
     await FB.set(DR('stok'), MENYU_STOK);
     toast(MENYU_STOK[ad] ? `❌ ${ad} stokdan çıxarıldı` : `✅ ${ad} stoka qaytarıldı`, 'info');
-    ad_menyuYukle();
-}
-
-// ============================================================
-// AYARLAR
-// ============================================================
-function ad_renderAyarlar() {
-    const c = document.getElementById('ad-p-ayarlar');
-    c.innerHTML = '';
-    c.appendChild(h('h3', {className: 's-title'}, '⚙️ Admin Ayarları'));
-    c.appendChild(h('div', {className: 'form'},
-        h('input', {type: 'text', id: 'ad-adminYeniKod', placeholder: 'Yeni kod (min 4 rəqəm)', maxlength: '10'}),
-        h('input', {type: 'text', id: 'ad-adminYeniAd', placeholder: 'Yeni ad'}),
-        h('button', {onclick: ad_adminOzKodDeyis}, '💾 Yadda saxla')));
-    c.appendChild(h('p', {id: 'ad-adminAyarMesaj', style: 'margin-top:15px;font-size:14px;'}));
+    ad_ayarlarYukle();
 }
 
 async function ad_adminOzKodDeyis() {
@@ -2480,28 +2124,26 @@ async function ad_adminOzKodDeyis() {
     const ad = document.getElementById('ad-adminYeniAd').value.trim();
     const m = document.getElementById('ad-adminAyarMesaj');
     const xeta = t => { m.style.color = '#ff6b6b'; m.textContent = t; toast(t, 'error'); };
-    if (!kodDuzgundur(kod)) return xeta('❌ Kod ən azı 4 rəqəm olmalıdır!');
+    if (!kodDuzgundur(kod)) return xeta('❌ Kod min 4 rəqəm!');
     if (!ad || !adDuzgundur(ad)) return xeta('❌ Ad yalnız hərf!');
     const user = istifadeciAl();
-    if (DATA.isciler.find(i => i.kod === kod && i.id !== user.id)) return xeta('❌ Bu kod mövcuddur!');
+    if (DATA.isciler.find(i => i.kod === kod && i.id !== user.id)) return xeta('❌ Kod mövcuddur!');
     try {
         await FB.update(DR('isciler/' + user.id), {kod, ad});
         localStorage.setItem('resto_aktiv', JSON.stringify({id: user.id, kod}));
         m.style.color = '#2ecc71'; m.textContent = '✅ Dəyişdirildi!';
-        toast('✅ Admin məlumatları yeniləndi!', 'success');
+        toast('✅ Yeniləndi!', 'success');
         const adEl = document.querySelector('.header .info .user-name');
         if (adEl) adEl.textContent = '👨‍💼 ' + ad;
-    } catch (err) {
-        toast('❌ Xəta: ' + err.message, 'error', 5000);
-    }
+    } catch (err) { toast('❌ Xəta: ' + err.message, 'error', 5000); }
 }
 
 // SIFIRLA
 function ad_renderSifirla() {
     const c = document.getElementById('ad-p-sifirla');
     c.innerHTML = '';
-    c.appendChild(h('h3', {className: 's-title'}, '🗑️ Sıfırlama Mərkəzi'));
-    c.appendChild(h('p', {style: 'color:#ff9800;padding:15px;background:rgba(255,152,0,0.1);border-left:4px solid #ff9800;border-radius:8px;margin-bottom:20px;'}, '⚠️ Bu əməliyyatlar geri qaytarıla bilməz!'));
+    c.appendChild(h('h3', {className: 's-title'}, '🗑️ Sıfırlama'));
+    c.appendChild(h('p', {style: 'color:#ff9800;padding:15px;background:rgba(255,152,0,0.1);border-left:4px solid #ff9800;border-radius:8px;margin-bottom:20px;'}, '⚠️ Geri qaytarıla bilməz!'));
     c.appendChild(h('div', {className: 'stats'},
         h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-statIsci'}, '0'), h('div', {className: 'l'}, 'İşçi')),
         h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-statSifaris'}, '0'), h('div', {className: 'l'}, 'Sifariş')),
@@ -2510,12 +2152,12 @@ function ad_renderSifirla() {
     const mk = (icon, title, desc, key, full) => h('div', {className: 'sifirla-kart' + (full ? ' full' : '')},
         h('div', {className: 'sifirla-icon' + (full ? ' big' : '')}, icon), h('h5', {}, title), h('p', {}, desc),
         h('button', {className: 'sifirla-btn danger' + (full ? ' big' : ''), onclick: () => ad_sifirla(key)}, '🗑️ Sıfırla'));
-    grid.appendChild(mk('📋', 'Masaları Sıfırla', 'Bütün masa sifarişləri + sessiyalar', 'masalar'));
+    grid.appendChild(mk('📋', 'Masaları Sıfırla', 'Bütün masa sifarişləri', 'masalar'));
     grid.appendChild(mk('📦', 'Paketləri Sıfırla', 'Bütün paketlər', 'paketler'));
-    grid.appendChild(mk('📱', 'QR Self-Orderları Sıfırla', 'Bütün QR sifarişləri', 'selforders'));
+    grid.appendChild(mk('📱', 'QR Sifarişləri', 'Bütün QR sifarişləri', 'selforders'));
     grid.appendChild(mk('🛒', 'Alışları Sıfırla', 'Bütün alış qeydləri', 'alislar'));
-    grid.appendChild(mk('👥', 'İşçiləri Sil', 'Admin istisna, bütün işçilər', 'isciler'));
-    grid.appendChild(mk('⚠️', 'HƏR ŞEYİ SIFIRLA', 'Bütün məlumatlar silinəcək', 'her-sey', true));
+    grid.appendChild(mk('👥', 'İşçiləri Sil', 'Admin xaric', 'isciler'));
+    grid.appendChild(mk('⚠️', 'HƏR ŞEYİ SIFIRLA', 'Bütün məlumatlar', 'her-sey', true));
     c.appendChild(grid);
     ad_sifirlaStatistika();
 }
@@ -2529,83 +2171,53 @@ function ad_sifirlaStatistika() {
 
 async function ad_sifirla(no) {
     const user = istifadeciAl();
-    const mesaj = {
-        'masalar': '⚠️ Bütün masa sifarişləri silinəcək!',
-        'paketler': '⚠️ Bütün paketlər silinəcək!',
-        'selforders': '⚠️ Bütün QR sifarişləri silinəcək!',
-        'alislar': '⚠️ Bütün alışlar silinəcək!',
-        'isciler': '⚠️ Bütün işçilər silinəcək!',
-        'her-sey': '🚨 HƏR ŞEY SİLİNƏCƏK!'
-    }[no];
-
-    confirmDialog(mesaj + ' Davam etmək üçün admin kodunuzu daxil edin.', async cavab => {
+    const mesaj = {'masalar': '⚠️ Masalar silinəcək!', 'paketler': '⚠️ Paketlər silinəcək!', 'selforders': '⚠️ QR sifarişlər silinəcək!', 'alislar': '⚠️ Alışlar silinəcək!', 'isciler': '⚠️ İşçilər silinəcək!', 'her-sey': '🚨 HƏR ŞEY SİLİNƏCƏK!'}[no];
+    confirmDialog(mesaj + ' Admin kodunuzu daxil edin.', async cavab => {
         if (!cavab) return;
         const kodDaxil = prompt('🔑 Admin kodu:');
         if (kodDaxil !== user.kod) { toast('❌ Kod yanlışdır!', 'error'); return; }
-
         try {
-            const masalariBosalt = async () => {
-                for (const m of DATA.masalar) await FB.update(DR('masalar/' + m.id), {status: 'bos'});
-            };
+            const masalariBosalt = async () => { for (const m of DATA.masalar) await FB.update(DR('masalar/' + m.id), {status: 'bos'}); };
             const sayacSifirla = async ad => { await FB.set(DR('sayac/' + ad), 1); };
-
             if (no === 'masalar') {
-                const masaSessiyaIdleri = DATA.sessiyalar.filter(s => s.tip === 'masa').map(s => s.id);
-                for (const x of DATA.sifarisler.filter(x => masaSessiyaIdleri.includes(x.sessiya_id))) await FB.remove(DR('sifarisler/' + x.id));
+                const ids = DATA.sessiyalar.filter(s => s.tip === 'masa').map(s => s.id);
+                for (const x of DATA.sifarisler.filter(x => ids.includes(x.sessiya_id))) await FB.remove(DR('sifarisler/' + x.id));
                 for (const s of DATA.sessiyalar.filter(s => s.tip === 'masa')) await FB.remove(DR('sessiyalar/' + s.id));
                 await masalariBosalt();
             }
             if (no === 'paketler') {
-                const paketSessiyaIdleri = DATA.sessiyalar.filter(s => s.tip === 'paket').map(s => s.id);
-                for (const x of DATA.sifarisler.filter(x => paketSessiyaIdleri.includes(x.sessiya_id))) await FB.remove(DR('sifarisler/' + x.id));
+                const ids = DATA.sessiyalar.filter(s => s.tip === 'paket').map(s => s.id);
+                for (const x of DATA.sifarisler.filter(x => ids.includes(x.sessiya_id))) await FB.remove(DR('sifarisler/' + x.id));
                 for (const s of DATA.sessiyalar.filter(s => s.tip === 'paket')) await FB.remove(DR('sessiyalar/' + s.id));
                 await sayacSifirla('paket');
             }
-            if (no === 'selforders') {
-                for (const s of DATA.selfOrders) await FB.remove(DR('selfOrders/' + s.id));
-                await sayacSifirla('selforder');
-            }
-            if (no === 'alislar') {
-                for (const a of DATA.alislar) await FB.remove(DR('alislar/' + a.id));
-            }
+            if (no === 'selforders') { for (const s of DATA.selfOrders) await FB.remove(DR('selfOrders/' + s.id)); await sayacSifirla('selforder'); }
+            if (no === 'alislar') { for (const a of DATA.alislar) await FB.remove(DR('alislar/' + a.id)); }
             if (no === 'isciler') {
                 for (const s of DATA.sessiyalar.filter(s => s.status === 'aktiv')) await sessiyaBagla(s.id);
                 for (const i of DATA.isciler.filter(x => x.rol !== 'admin')) await FB.remove(DR('isciler/' + i.id));
             }
             if (no === 'her-sey') {
-                for (const k of ['sifarisler', 'sessiyalar', 'alislar', 'endirimler', 'selfOrders']) {
-                    for (const x of DATA[k] || []) await FB.remove(DR(k + '/' + x.id));
-                }
+                for (const k of ['sifarisler', 'sessiyalar', 'alislar', 'endirimler', 'selfOrders']) for (const x of DATA[k] || []) await FB.remove(DR(k + '/' + x.id));
                 for (const i of DATA.isciler.filter(x => x.rol !== 'admin')) await FB.remove(DR('isciler/' + i.id));
                 await masalariBosalt();
                 await FB.set(DR('sayac'), {sifaris: 1, sessiya: 1, isci: 2, alis: 1, endirim: 1, paket: 1, selforder: 1});
             }
             toast('✅ Sıfırlandı!', 'success');
-        } catch (err) {
-            toast('❌ Xəta: ' + err.message, 'error', 5000);
-        }
+        } catch (err) { toast('❌ Xəta: ' + err.message, 'error', 5000); }
         setTimeout(() => ad_render(), 500);
-    }, 'Sıfırlama', '⚠️');
+    }, 'Sıfırla', '⚠️');
 }
 
-// ============================================================
-// BAŞLAT
-// ============================================================
+// ==================== BAŞLAT ====================
 window.addEventListener('load', () => {
     try {
         app = document.getElementById('app');
         if (!app) { app = document.createElement('div'); app.id = 'app'; document.body.appendChild(app); }
         document.body.appendChild(h('div', {className: 'bg-changer', onclick: bgDeyis}, '🎨'));
-
         fonYukle();
-
-        if (!FB || !FB.db) {
-            toast('❌ Firebase yüklənmədi! index.html-i yoxlayın.', 'error', 10000);
-            return;
-        }
-
+        if (!FB || !FB.db) { toast('❌ Firebase yüklənmədi!', 'error', 10000); return; }
         dinle();
-
         document.addEventListener('keydown', e => {
             if (!document.querySelector('.login-wrap')) return;
             if (document.getElementById('confirmModal')) return;
