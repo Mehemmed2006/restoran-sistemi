@@ -1,7 +1,7 @@
 // ============================================================
-// 🍽️ RESTORAN SİSTEMİ — FIREBASE + TOAST + CONFIRM + GOOGLE MAPS
+// 🍽️ RESTORAN SİSTEMİ — FIREBASE + TOAST + CONFIRM + OPENSTREETMAP
 // ============================================================
-console.log('✅ app.js yükləndi (v6)');
+console.log('✅ app.js yükləndi (v7 - OpenStreetMap)');
 
 window.addEventListener('error', e => {
     let b = document.getElementById('xetaQutusu');
@@ -106,16 +106,122 @@ function confirmDialog(mesaj, callback, başlıq = 'Təsdiq', icon = '❓') {
 }
 
 // ============================================================
-// 🆕 GOOGLE MAPS LİNKİ — Pulsuz, API açarı lazım deyil
+// 🆕 OPENSTREETMAP (LEAFLET) — Xəritə modalları
 // ============================================================
-function xeriteyeBax(unvan) {
-    if (!unvan || !unvan.trim()) {
-        toast('❌ Ünvan yoxdur!', 'error');
-        return;
+function xeriteSecModal(callback) {
+    const kohne = document.getElementById('xeriteSecModal');
+    if (kohne) kohne.remove();
+
+    // Leaflet CSS və JS yüklə (əgər yoxdursa)
+    if (!document.getElementById('leafletCss')) {
+        const css = document.createElement('link');
+        css.id = 'leafletCss';
+        css.rel = 'stylesheet';
+        css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(css);
     }
-    const query = encodeURIComponent(unvan.trim());
-    const url = `https://www.google.com/maps/search/?api=1&query=${query}`;
-    window.open(url, '_blank');
+    if (typeof L === 'undefined') {
+        const js = document.createElement('script');
+        js.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        js.onload = () => gosterXerite(callback);
+        document.head.appendChild(js);
+    } else {
+        gosterXerite(callback);
+    }
+}
+
+function gosterXerite(callback) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.id = 'xeriteSecModal';
+    modal.style.zIndex = '99999';
+    modal.innerHTML = `
+        <div class="modal-cek" style="max-width: 600px; padding: 15px;">
+            <h3 style="text-align:center; margin-bottom:15px; color:#f39c12;">📍 Xəritədən Ünvan Seç</h3>
+            <div id="secimXerite" style="width:100%; height:350px; border-radius:10px; margin-bottom:15px;"></div>
+            <p style="font-size:12px; color:#aaa; margin-bottom:15px; text-align:center;">Xəritəyə klikləyərək müştərinin evini işarələyin</p>
+            <div style="display:flex; gap:10px;">
+                <button class="s-btn b-tamam" id="xeriteTesdiq" style="margin:0;" disabled>✅ Təsdiqlə</button>
+                <button class="s-btn b-geri" id="xeriteLegv" style="margin:0;">← Ləğv et</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    modal.style.display = 'flex';
+
+    // Xəritəni yarat
+    const map = L.map('secimXerite').setView([40.4093, 49.8671], 12); // Bakı
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap',
+        maxZoom: 19
+    }).addTo(map);
+
+    let secilenMarker = null;
+    let secilenKoord = null;
+
+    map.on('click', (e) => {
+        const {lat, lng} = e.latlng;
+        secilenKoord = {lat, lng};
+        
+        if (secilenMarker) map.removeLayer(secilenMarker);
+        secilenMarker = L.marker([lat, lng]).addTo(map);
+        
+        document.getElementById('xeriteTesdiq').disabled = false;
+    });
+
+    document.getElementById('xeriteTesdiq').onclick = () => {
+        if (!secilenKoord) return;
+        modal.remove();
+        callback(secilenKoord);
+    };
+    document.getElementById('xeriteLegv').onclick = () => modal.remove();
+}
+
+function xeriteGosterModal(lat, lng, unvan) {
+    const kohne = document.getElementById('xeriteGosterModal');
+    if (kohne) kohne.remove();
+
+    if (!document.getElementById('leafletCss')) {
+        const css = document.createElement('link');
+        css.id = 'leafletCss';
+        css.rel = 'stylesheet';
+        css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(css);
+    }
+
+    const goster = () => {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'xeriteGosterModal';
+        modal.style.zIndex = '99999';
+        modal.innerHTML = `
+            <div class="modal-cek" style="max-width: 600px; padding: 15px;">
+                <h3 style="text-align:center; margin-bottom:15px; color:#f39c12;">📍 Müştərinin Ünvanı</h3>
+                <div id="gosterXerite" style="width:100%; height:350px; border-radius:10px; margin-bottom:15px;"></div>
+                <p style="font-size:14px; color:#fff; margin-bottom:15px; text-align:center;">${esc(unvan)}</p>
+                <button class="s-btn b-geri" onclick="this.closest('.modal-overlay').remove()" style="margin:0;">← Bağla</button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.style.display = 'flex';
+
+        const map = L.map('gosterXerite').setView([lat, lng], 16);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap',
+            maxZoom: 19
+        }).addTo(map);
+        L.marker([lat, lng]).addTo(map).bindPopup(esc(unvan)).openPopup();
+    };
+
+    if (typeof L === 'undefined') {
+        const js = document.createElement('script');
+        js.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        js.onload = goster;
+        document.head.appendChild(js);
+    } else {
+        goster();
+    }
 }
 
 // ==================== REAL-TIME DİNGLƏYİCİLƏR ====================
@@ -527,6 +633,7 @@ async function sessiyaYarat(masaId, masaAd, tip, elave = {}) {
         mebleg: 0, yekun: 0, endirim_faiz: 0, endirim_mebleg: 0, endirim_ad: '',
         status: 'aktiv',
         musteri_ad: elave.musteri_ad || '', musteri_tel: elave.musteri_tel || '', unvan: elave.unvan || '',
+        lat: elave.lat || null, lng: elave.lng || null,
         paket_nomre: paketNo
     };
     await FB.set(DR('sessiyalar/' + id), sessiya);
@@ -925,13 +1032,22 @@ function pk_render() {
                         h('td', {style: 'color:#e94560;font-weight:bold;'}, pul(x.mebleg))))))
         );
 
+        // Xəritə düyməsi (əgər koordinat varsa)
+        const xeriteBtn = (p.lat && p.lng) ? h('button', {
+            className: 'small-btn',
+            style: 'background: linear-gradient(135deg, #4285f4, #34a853); color: #fff;',
+            onclick: () => xeriteGosterModal(p.lat, p.lng, p.unvan)
+        }, '📍 Xəritədə Göstər') : null;
+
         const btnler = aktiv
             ? h('div', {className: 'aktiv-masa-btnler'},
                 h('button', {className: 'small-btn', style: 'background:#3498db;', onclick: () => pk_menyuAc(p.id)}, '🍽️ Sifarişə davam et'),
+                xeriteBtn,
                 h('button', {className: 'small-btn', style: 'background:#27ae60;', onclick: () => sessiyaCeki(p.id, 'Paket #' + p.paket_nomre)}, '🖨️ Çek göstər'),
                 h('button', {className: 'small-btn', style: 'background:#e74c3c;', onclick: () => pk_bagla(p.id)}, '✅ Bağla'))
             : h('div', {className: 'aktiv-masa-btnler'},
                 h('span', {style: 'color:#2ecc71;'}, '🟢 Bağlı'),
+                xeriteBtn,
                 h('button', {className: 'small-btn', style: 'background:#27ae60;', onclick: () => sessiyaCeki(p.id, 'Paket #' + p.paket_nomre)}, '🖨️ Çek göstər'));
 
         c.appendChild(h('div', {className: 'aktiv-masa-kart', style: 'border-color:rgba(243,156,18,0.5);'},
@@ -943,25 +1059,19 @@ function pk_render() {
                 ),
                 h('div', {className: 'aktiv-masa-mebleg'}, pul(p.yekun))
             ),
-            siyahi,
-            h('div', {style: 'display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;'},
-                h('button', {
-                    className: 'small-btn',
-                    style: 'background: linear-gradient(135deg, #4285f4, #34a853); color: #fff;',
-                    onclick: () => xeriteyeBax(p.unvan)
-                }, '📍 Xəritədə Göstər')
-            ),
-            btnler
+            siyahi, btnler
         ));
     });
 }
 
 // ============================================================
-// 🆕 YENİ PAKET FORMASI — Ağ boşluqlar, hamısı məcburi
+// 🆕 YENİ PAKET FORMASI — Ağ boşluqlar + Xəritədən seç
 // ============================================================
 async function pk_yeniPaket() {
     const kohne = document.getElementById('yeniPaketModal');
     if (kohne) kohne.remove();
+
+    let secilenKoordinat = null;
 
     const modal = h('div', {className: 'modal-overlay', id: 'yeniPaketModal'},
         h('div', {className: 'modal-cek', style: 'max-width: 420px;'},
@@ -988,6 +1098,16 @@ async function pk_yeniPaket() {
                         style: 'width:100%; padding:12px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.4); background:#ffffff; color:#000; font-size:15px; outline:none;'
                     })
                 ),
+                h('button', {
+                    className: 's-btn b-cap',
+                    style: 'margin-top:0; padding:10px; font-size:14px;',
+                    onclick: () => {
+                        xeriteSecModal((koord) => {
+                            secilenKoordinat = koord;
+                            toast('✅ Xəritədən ünvan seçildi!', 'success');
+                        });
+                    }
+                }, '🗺️ Xəritədən Ünvan Seç'),
                 h('p', {style: 'font-size:11px; color:#888; margin:0;'}, '* - Bütün sahələr məcburidir'),
                 h('button', {
                     className: 's-btn b-tamam',
@@ -1002,7 +1122,11 @@ async function pk_yeniPaket() {
                         
                         modal.remove();
                         try {
-                            const s = await sessiyaYarat(null, 'Paket', 'paket', {musteri_ad: ad, musteri_tel: tel, unvan});
+                            const s = await sessiyaYarat(null, 'Paket', 'paket', {
+                                musteri_ad: ad, musteri_tel: tel, unvan,
+                                lat: secilenKoordinat ? secilenKoordinat.lat : null,
+                                lng: secilenKoordinat ? secilenKoordinat.lng : null
+                            });
                             toast('✅ Paket yaradıldı: #' + s.paket_nomre, 'success');
                             setTimeout(() => pk_menyuAc(s.id), 300);
                         } catch (err) {
