@@ -1,6 +1,6 @@
 /* ============================================================
-   🍽️ RESTORAN SİSTEMİ — TAM CSS
-   Kompüter + Planşet + Mobil + Yeni Əlavələr
+   🍽️ RESTORAN SİSTEMİ — TAM CSS (v12)
+   Bütün 10 düzəliş ilə
    ============================================================ */
 
 * {
@@ -26,7 +26,6 @@ body {
     width: 100%;
     max-width: 100%;
     overflow-x: hidden;
-    overflow-x: clip;
     position: relative;
     transition: background 0.5s;
 }
@@ -82,7 +81,7 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
 }
 
 /* ============================================================
-   🆕 TOAST BİLDİRİŞLƏR (YENİ)
+   🆕 TOAST BİLDİRİŞLƏR
    ============================================================ */
 .toast-wrap {
     position: fixed;
@@ -113,19 +112,10 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
     gap: 10px;
 }
 
-.toast.error {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
-}
-.toast.info {
-    background: linear-gradient(135deg, #3498db, #2980b9);
-}
-.toast.warning {
-    background: linear-gradient(135deg, #f39c12, #e67e22);
-}
-
-.toast.out {
-    animation: toastOut 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
+.toast.error { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+.toast.info { background: linear-gradient(135deg, #3498db, #2980b9); }
+.toast.warning { background: linear-gradient(135deg, #f39c12, #e67e22); }
+.toast.out { animation: toastOut 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
 
 @keyframes toastIn {
     from { transform: translateX(400px); opacity: 0; }
@@ -138,38 +128,7 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
 }
 
 /* ============================================================
-   🆕 LOADING SPINNER (YENİ)
-   ============================================================ */
-.loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(4px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 99997;
-    animation: fadeIn 0.2s ease;
-}
-
-.loading-spinner {
-    width: 64px;
-    height: 64px;
-    border: 5px solid rgba(255, 255, 255, 0.15);
-    border-top-color: #e94560;
-    border-radius: 50%;
-    animation: spin 0.9s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* ============================================================
-   🆕 CONFIRM MODAL (YENİ)
+   🆕 CONFIRM MODAL
    ============================================================ */
 .confirm-overlay {
     position: fixed;
@@ -199,23 +158,9 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
     animation: bounceIn 0.35s ease;
 }
 
-.confirm-box .confirm-icon {
-    font-size: 56px;
-    margin-bottom: 15px;
-}
-
-.confirm-box h3 {
-    font-size: 20px;
-    color: #fff;
-    margin-bottom: 12px;
-}
-
-.confirm-box p {
-    font-size: 15px;
-    color: #bbb;
-    margin-bottom: 25px;
-    line-height: 1.5;
-}
+.confirm-box .confirm-icon { font-size: 56px; margin-bottom: 15px; }
+.confirm-box h3 { font-size: 20px; color: #fff; margin-bottom: 12px; }
+.confirm-box p { font-size: 15px; color: #bbb; margin-bottom: 25px; line-height: 1.5; }
 
 .confirm-buttons {
     display: grid;
@@ -234,29 +179,15 @@ body.bg-6 { background: linear-gradient(rgba(10,10,30,0.85), rgba(10,10,30,0.85)
     color: #fff;
 }
 
-.confirm-btn.yes {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
-}
-.confirm-btn.yes:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(231, 76, 60, 0.5);
-}
-
-.confirm-btn.no {
-    background: rgba(255, 255, 255, 0.12);
-    border: 2px solid rgba(255, 255, 255, 0.25);
-}
-.confirm-btn.no:hover {
-    background: rgba(255, 255, 255, 0.2);
-    transform: translateY(-2px);
-}
+.confirm-btn.yes { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+.confirm-btn.yes:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(231, 76, 60, 0.5); }
+.confirm-btn.no { background: rgba(255, 255, 255, 0.12); border: 2px solid rgba(255, 255, 255, 0.25); }
+.confirm-btn.no:hover { background: rgba(255, 255, 255, 0.2); transform: translateY(-2px); }
 
 /* ============================================================
-   🆕 FOCUS EFFEKTLƏRİ (YENİ)
+   🆕 FOCUS EFFEKTLƏRİ
    ============================================================ */
-button:focus-visible,
-input:focus-visible,
-select:focus-visible {
+button:focus-visible, input:focus-visible, select:focus-visible {
     outline: 2px solid #e94560;
     outline-offset: 2px;
 }
@@ -500,6 +431,15 @@ select:focus-visible {
 .masa.bagli .ad { color: #888; }
 .masa.bagli .st { color: #ff9800; }
 
+/* Düzəliş 3: Mavi masa (çek çap olunub) */
+.masa.cek-cap {
+    background: linear-gradient(145deg, rgba(52,152,219,0.35), rgba(41,128,185,0.2)) !important;
+    border-color: #3498db !important;
+    box-shadow: 0 0 20px rgba(52, 152, 219, 0.3);
+}
+.masa.cek-cap .st { color: #5dade2 !important; }
+.masa.cek-cap .ad { color: #d6eaf8 !important; }
+
 .masa .isci-ad {
     font-size: 12px;
     color: #ff9800;
@@ -512,6 +452,7 @@ select:focus-visible {
     text-overflow: ellipsis;
 }
 .masa.ozum .isci-ad { color: #2ecc71; }
+.masa.cek-cap .isci-ad { color: #85c1e9; border-color: rgba(52,152,219,0.3); }
 
 .masa-timer {
     display: flex;
@@ -547,6 +488,7 @@ select:focus-visible {
 }
 .masa.kabinet:hover { border-color: #9b59b6; box-shadow: 0 15px 40px rgba(155, 89, 182, 0.5); }
 .masa.kabinet .ad { font-size: 24px; color: #d7b8e8; }
+.masa.kabinet.cek-cap { background: linear-gradient(135deg, rgba(52,152,219,0.35), rgba(41,128,185,0.2)) !important; border-color: #3498db !important; }
 
 /* ============================================================
    🆕 ƏSAS MENYU
@@ -704,6 +646,15 @@ select:focus-visible {
 .mehsul .ad { font-size: 15px; margin-bottom: 8px; padding-right: 22px; font-weight: 500; }
 .mehsul .q { color: #e94560; font-weight: bold; font-size: 18px; }
 
+/* Stokda olmayan məhsul */
+.mehsul.stokda-yox {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: grayscale(0.7);
+}
+.mehsul.stokda-yox:hover { transform: none; box-shadow: none; }
+.mehsul.stokda-yox::before { content: '❌'; color: #e74c3c; }
+
 /* SƏBƏT */
 .sebet {
     background: rgba(0, 0, 0, 0.55);
@@ -806,7 +757,7 @@ select:focus-visible {
 .alt-duymeler .s-btn { margin-top: 0; padding: 18px 20px; font-size: 15px; }
 
 /* ============================================================
-   🧾 MODAL (ÇEK / ENDİRİM)
+   🧾 MODAL (ÇEK / ENDİRİM / ÖDƏNİŞ)
    ============================================================ */
 .modal-overlay {
     position: fixed;
@@ -872,7 +823,7 @@ select:focus-visible {
 #endirimModal input:focus { border-color: #e94560; box-shadow: 0 0 12px rgba(233, 69, 96, 0.25); }
 
 /* ============================================================
-   👨‍💼 ADMİN PANELİ — TAB-LAR
+   👨‍💼 ADMİN — TABLAR
    ============================================================ */
 .tabs {
     display: flex;
@@ -923,10 +874,23 @@ select:focus-visible {
 .panel.active { display: block; animation: fadeInUp 0.4s ease; }
 
 /* ============================================================
-   📊 CƏDVƏLLƏR
-   Kompüterdə: tam eni istifadə edir
-   Mobil/Planşetdə: özü sürüşür
+   📊 CƏDVƏLLƏR — Düzəliş 10
    ============================================================ */
+.table-wrap {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(233,69,96,0.8) rgba(255,255,255,0.1);
+    max-width: 100%;
+    width: 100%;
+    border-radius: 12px;
+}
+.table-wrap::-webkit-scrollbar { height: 6px; display: block; }
+.table-wrap::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 3px; }
+.table-wrap::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.8); border-radius: 3px; }
+
 table {
     width: 100%;
     max-width: 100%;
@@ -952,37 +916,6 @@ th {
 }
 td { font-size: 15px; }
 tr:hover td { background: rgba(255, 255, 255, 0.05); }
-
-@media (max-width: 900px) {
-    table {
-        display: block;
-        overflow-x: auto;
-        overflow-y: hidden;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior-x: contain;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(233,69,96,0.8) rgba(255,255,255,0.1);
-        cursor: grab;
-        white-space: nowrap;
-    }
-    table:active { cursor: grabbing; }
-    table::-webkit-scrollbar { height: 6px; display: block; }
-    table::-webkit-scrollbar-track { background: rgba(255,255,255,0.1); border-radius: 3px; }
-    table::-webkit-scrollbar-thumb { background: rgba(233,69,96,0.8); border-radius: 3px; }
-
-    table thead,
-    table tbody {
-        display: table;
-        width: 100%;
-        min-width: 600px;
-    }
-
-    th, td {
-        padding: 10px 12px;
-        font-size: 13px;
-    }
-    th { font-size: 12px; }
-}
 
 /* ============================================================
    FORMLAR
@@ -1084,6 +1017,12 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
     min-width: 0;
 }
 .aktiv-masa-kart:hover { border-color: #e94560; box-shadow: 0 15px 45px rgba(233, 69, 96, 0.35); }
+.aktiv-masa-kart.cek-cap {
+    border-color: #3498db !important;
+    background: linear-gradient(145deg, rgba(52,152,219,0.15), rgba(41,128,185,0.05));
+}
+.aktiv-masa-kart.cek-cap:hover { border-color: #5dade2; box-shadow: 0 15px 45px rgba(52, 152, 219, 0.35); }
+
 .aktiv-masa-header {
     display: flex;
     justify-content: space-between;
@@ -1196,18 +1135,15 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
     .container { padding: 18px; }
     .header h2 { font-size: 19px; }
     .header .info .user-name { font-size: 14px; }
-
     .menyu-wrap { grid-template-columns: minmax(0, 1fr); gap: 18px; }
     .sebet { position: static; max-height: none; }
-
     .qrafik-grid { grid-template-columns: minmax(0, 1fr); }
-
     .toast-wrap { top: 10px; right: 10px; left: 10px; }
     .toast { max-width: 100%; font-size: 14px; padding: 12px 18px; }
 }
 
 /* ============================================================
-   📱 MOBİL (600px-ə qədər)
+   📱 MOBİL (600px-ə qədər) — Düzəliş 10
    ============================================================ */
 @media (max-width: 600px) {
     body[class*="bg-"] { background-attachment: scroll; }
@@ -1229,7 +1165,7 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
     .s-title { font-size: 17px; margin-bottom: 12px; }
     .bolme-basliq { font-size: 14px; padding: 8px 12px; margin: 16px 0 10px; }
 
-    /* MASALAR */
+    /* MASALAR — 2 sıra */
     .masalar { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .masalar.kabinetler { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-width: 100%; }
     .masa { padding: 12px 8px; border-radius: 12px; }
@@ -1257,7 +1193,7 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
     .kat { padding: 7px 13px; font-size: 12px; }
     .kat.active, .kat:hover { transform: none; }
 
-    /* MƏHSULLAR */
+    /* MƏHSULLAR — 2 sıra */
     .mehsullar { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .mehsul { padding: 10px; border-radius: 12px; }
     .mehsul::before { font-size: 16px; top: 6px; right: 8px; }
@@ -1281,16 +1217,28 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
     .tabs { padding: 5px; gap: 5px; margin-bottom: 14px; }
     .tab { padding: 8px 13px; font-size: 12px; }
 
-    /* CƏDVƏLLƏR */
+    /* CƏDVƏLLƏR — Düzəliş 10 */
+    table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+        max-width: 100%;
+        min-width: 0;
+    }
+    table thead, table tbody {
+        display: table;
+        width: 100%;
+        min-width: 450px;
+    }
     th, td { padding: 8px 10px; font-size: 12px; }
     th { font-size: 11px; }
-    table thead, table tbody { min-width: 600px; }
 
     /* FORM */
     .form { flex-direction: column; align-items: stretch; gap: 8px; }
     .form input, .form select, .form button { width: 100%; min-width: 0; padding: 10px 12px; font-size: 14px; }
 
-    /* STATİSTİKA */
+    /* STATİSTİKA — 2 sıra */
     .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .stat { padding: 12px 8px; }
     .stat .v { font-size: 18px; }
@@ -1319,7 +1267,7 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
     .chart-wrap { height: 220px; }
     .q-title { font-size: 14px; margin-bottom: 12px; }
 
-    /* MODAL / ÇEK */
+    /* MODAL */
     .modal-overlay { padding: 10px; }
     .modal-cek {
         padding: 16px 14px;
@@ -1346,20 +1294,17 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
     .calc-btn { padding: 14px 8px; font-size: 20px; border-radius: 12px; }
     .kod-display input { font-size: 22px; padding: 14px 48px 14px 14px; letter-spacing: 6px; }
 
-    /* YENİ: TOAST */
+    /* TOAST */
     .toast-wrap { top: 8px; right: 8px; left: 8px; gap: 8px; }
     .toast { padding: 12px 16px; font-size: 13px; border-radius: 10px; max-width: 100%; }
 
-    /* YENİ: CONFIRM */
+    /* CONFIRM */
     .confirm-box { padding: 22px 18px; border-radius: 16px; }
     .confirm-box .confirm-icon { font-size: 44px; }
     .confirm-box h3 { font-size: 17px; }
     .confirm-box p { font-size: 13px; }
     .confirm-buttons { grid-template-columns: 1fr; gap: 8px; }
     .confirm-btn { padding: 11px 16px; font-size: 14px; }
-
-    /* YENİ: LOADING */
-    .loading-spinner { width: 50px; height: 50px; border-width: 4px; }
 }
 
 /* ============================================================
@@ -1375,6 +1320,7 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
     .kod-display input { font-size: 20px; letter-spacing: 5px; }
     .calc-btn { padding: 12px 6px; font-size: 18px; }
     .modal-cek { max-width: 100%; }
+    .mehsullar { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ============================================================
@@ -1384,7 +1330,7 @@ tr:hover td { background: rgba(255, 255, 255, 0.05); }
     html, body { background: #fff !important; color: #000 !important; overflow: visible !important; }
     .header, .tabs, .form, .s-btn, button, .btn-out, .goz-btn,
     .cek-btnler, .alt-duymeler, .bg-changer,
-    .toast-wrap, .loading-overlay, .confirm-overlay { display: none !important; }
+    .toast-wrap, .confirm-overlay { display: none !important; }
     .modal-overlay { position: static !important; background: #fff !important; display: block !important; padding: 0; height: auto; }
     .modal-cek { box-shadow: none; max-width: 100%; max-height: none; padding: 0; overflow: visible; }
     table { background: #fff !important; min-width: auto; display: table; }
