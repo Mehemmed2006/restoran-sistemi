@@ -1,7 +1,7 @@
 // ============================================================
-// 🍽️ RESTORAN SİSTEMİ — FIREBASE + TOAST + CONFIRM
+// 🍽️ RESTORAN SİSTEMİ — FIREBASE + TOAST + CONFIRM + GOOGLE MAPS
 // ============================================================
-console.log('✅ app.js yükləndi (v5 - yeni paket forması)');
+console.log('✅ app.js yükləndi (v6)');
 
 window.addEventListener('error', e => {
     let b = document.getElementById('xetaQutusu');
@@ -68,7 +68,6 @@ function toast(mesaj, növ = 'success', müddət = 3000) {
     }, müddət);
 }
 
-// İstənilən gözlənilməz xəta olsa: bildiriş çıxsın
 window.addEventListener('unhandledrejection', e => {
     toast('❌ Xəta: ' + ((e.reason && e.reason.message) || e.reason), 'error', 5000);
 });
@@ -104,6 +103,19 @@ function confirmDialog(mesaj, callback, başlıq = 'Təsdiq', icon = '❓') {
         modal.remove();
         callback(false);
     };
+}
+
+// ============================================================
+// 🆕 GOOGLE MAPS LİNKİ — Pulsuz, API açarı lazım deyil
+// ============================================================
+function xeriteyeBax(unvan) {
+    if (!unvan || !unvan.trim()) {
+        toast('❌ Ünvan yoxdur!', 'error');
+        return;
+    }
+    const query = encodeURIComponent(unvan.trim());
+    const url = `https://www.google.com/maps/search/?api=1&query=${query}`;
+    window.open(url, '_blank');
 }
 
 // ==================== REAL-TIME DİNGLƏYİCİLƏR ====================
@@ -931,20 +943,26 @@ function pk_render() {
                 ),
                 h('div', {className: 'aktiv-masa-mebleg'}, pul(p.yekun))
             ),
-            siyahi, btnler
+            siyahi,
+            h('div', {style: 'display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;'},
+                h('button', {
+                    className: 'small-btn',
+                    style: 'background: linear-gradient(135deg, #4285f4, #34a853); color: #fff;',
+                    onclick: () => xeriteyeBax(p.unvan)
+                }, '📍 Xəritədə Göstər')
+            ),
+            btnler
         ));
     });
 }
 
 // ============================================================
-// 🆕 YENİ PAKET FORMASI — Gözəl modal
+// 🆕 YENİ PAKET FORMASI — Ağ boşluqlar, hamısı məcburi
 // ============================================================
 async function pk_yeniPaket() {
-    // Köhnə modal varsa sil
     const kohne = document.getElementById('yeniPaketModal');
     if (kohne) kohne.remove();
 
-    // Modal yarat
     const modal = h('div', {className: 'modal-overlay', id: 'yeniPaketModal'},
         h('div', {className: 'modal-cek', style: 'max-width: 420px;'},
             h('h3', {style: 'text-align:center; margin-bottom:20px; color:#f39c12; font-size:20px;'}, '📦 Yeni Paket Sifarişi'),
@@ -953,24 +971,24 @@ async function pk_yeniPaket() {
                     h('label', {style: 'display:block; font-size:13px; color:#aaa; margin-bottom:5px; font-weight:600;'}, '👤 Müştəri adı *'),
                     h('input', {
                         type: 'text', id: 'pk-ad', placeholder: 'Məsələn: Əli Məmmədov',
-                        style: 'width:100%; padding:12px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.5); color:#fff; font-size:15px; outline:none;'
+                        style: 'width:100%; padding:12px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.4); background:#ffffff; color:#000; font-size:15px; outline:none;'
                     })
                 ),
                 h('div', {},
-                    h('label', {style: 'display:block; font-size:13px; color:#aaa; margin-bottom:5px; font-weight:600;'}, '📞 Telefon'),
+                    h('label', {style: 'display:block; font-size:13px; color:#aaa; margin-bottom:5px; font-weight:600;'}, '📞 Telefon *'),
                     h('input', {
                         type: 'tel', id: 'pk-tel', placeholder: 'Məsələn: 0501234567',
-                        style: 'width:100%; padding:12px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.5); color:#fff; font-size:15px; outline:none;'
+                        style: 'width:100%; padding:12px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.4); background:#ffffff; color:#000; font-size:15px; outline:none;'
                     })
                 ),
                 h('div', {},
                     h('label', {style: 'display:block; font-size:13px; color:#aaa; margin-bottom:5px; font-weight:600;'}, '📍 Ünvan *'),
                     h('input', {
                         type: 'text', id: 'pk-unvan', placeholder: 'Məsələn: Nizami küç. 15, mənzil 8',
-                        style: 'width:100%; padding:12px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.2); background:rgba(0,0,0,0.5); color:#fff; font-size:15px; outline:none;'
+                        style: 'width:100%; padding:12px 15px; border-radius:10px; border:1px solid rgba(255,255,255,0.4); background:#ffffff; color:#000; font-size:15px; outline:none;'
                     })
                 ),
-                h('p', {style: 'font-size:11px; color:#888; margin:0;'}, '* - Məcburi sahələr'),
+                h('p', {style: 'font-size:11px; color:#888; margin:0;'}, '* - Bütün sahələr məcburidir'),
                 h('button', {
                     className: 's-btn b-tamam',
                     onclick: async () => {
@@ -978,8 +996,9 @@ async function pk_yeniPaket() {
                         const tel = document.getElementById('pk-tel').value.trim();
                         const unvan = document.getElementById('pk-unvan').value.trim();
                         
-                        if (!ad) { toast('❌ Müştəri adı lazımdır!', 'error'); return; }
-                        if (!unvan) { toast('❌ Ünvan lazımdır!', 'error'); return; }
+                        if (!ad) { toast('❌ Müştəri adı lazımdır!', 'error'); document.getElementById('pk-ad').focus(); return; }
+                        if (!tel) { toast('❌ Telefon nömrəsi lazımdır!', 'error'); document.getElementById('pk-tel').focus(); return; }
+                        if (!unvan) { toast('❌ Ünvan lazımdır!', 'error'); document.getElementById('pk-unvan').focus(); return; }
                         
                         modal.remove();
                         try {
@@ -1001,10 +1020,8 @@ async function pk_yeniPaket() {
     document.body.appendChild(modal);
     modal.style.display = 'flex';
 
-    // İlk input-a fokus
     setTimeout(() => document.getElementById('pk-ad')?.focus(), 100);
 
-    // Enter ilə təsdiqləmə
     modal.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
             e.preventDefault();
