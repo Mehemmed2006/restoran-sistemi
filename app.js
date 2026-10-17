@@ -1,7 +1,7 @@
 // ============================================================
-// 🍽️ RESTORAN SİSTEMİ — FIREBASE + TOAST + CONFIRM
+// 🍽️ RESTORAN SİSTEMİ — FIREBASE + TOAST + CONFIRM + QR SELF-ORDER
 // ============================================================
-console.log('✅ app.js yükləndi (v10 - xəritə tamamilə silindi)');
+console.log('✅ app.js yükləndi (v11)');
 
 window.addEventListener('error', e => {
     let b = document.getElementById('xetaQutusu');
@@ -45,11 +45,11 @@ const DR = (path) => FB.ref(FB.db, path);
 
 const DATA = {
     isciler: [], masalar: [], sessiyalar: [], sifarisler: [],
-    alislar: [], endirimler: [], sayac: {}, hazir: false
+    alislar: [], endirimler: [], sayac: {}, selfOrders: [], hazir: false
 };
 
 // ============================================================
-// 🆕 TOAST — Gözəl bildirişlər
+// TOAST
 // ============================================================
 function toast(mesaj, növ = 'success', müddət = 3000) {
     let wrap = document.querySelector('.toast-wrap');
@@ -73,7 +73,7 @@ window.addEventListener('unhandledrejection', e => {
 });
 
 // ============================================================
-// 🆕 CONFIRM — Gözəl təsdiq pəncərəsi
+// CONFIRM
 // ============================================================
 function confirmDialog(mesaj, callback, başlıq = 'Təsdiq', icon = '❓') {
     const mövcud = document.getElementById('confirmModal');
@@ -112,7 +112,7 @@ function dinle() {
     if (_dinlemeBasladi) return;
     _dinlemeBasladi = true;
 
-    const yollar = ['isciler', 'masalar', 'sessiyalar', 'sifarisler', 'alislar', 'endirimler', 'sayac'];
+    const yollar = ['isciler', 'masalar', 'sessiyalar', 'sifarisler', 'alislar', 'endirimler', 'sayac', 'selfOrders'];
     let hazirSay = 0;
 
     yollar.forEach(yol => {
@@ -149,11 +149,18 @@ async function ilkYukleme() {
             await FB.set(DR('masalar'), masalar);
         }
         if (!DATA.sayac || !DATA.sayac.sifaris) {
-            await FB.set(DR('sayac'), {sifaris: 1, sessiya: 1, isci: 2, alis: 1, endirim: 1, paket: 1});
+            await FB.set(DR('sayac'), {sifaris: 1, sessiya: 1, isci: 2, alis: 1, endirim: 1, paket: 1, selforder: 1});
         }
     } catch (e) {
         console.error(e);
         toast('❌ Başlanğıc xətası: ' + e.message, 'error', 6000);
+    }
+
+    // QR rejimi yoxla
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('qr') === '1') {
+        qrSecimEkrani();
+        return;
     }
 
     const user = istifadeciAl();
@@ -935,9 +942,6 @@ function pk_render() {
     });
 }
 
-// ============================================================
-// 🆕 YENİ PAKET FORMASI — Ağ boşluqlar, hamısı məcburi
-// ============================================================
 async function pk_yeniPaket() {
     const kohne = document.getElementById('yeniPaketModal');
     if (kohne) kohne.remove();
@@ -1191,14 +1195,19 @@ async function ka_alisElave() {
 }
 
 // ============================================================
-// ADMİN
+// ADMİN — TABLAR
 // ============================================================
 let charts = {};
 const AD_TABS = [
-    ['isciler', '👥 İşçilər'], ['aktiv', '📋 Aktiv Masalar'],
-    ['alislar', '🛒 Alışlar'], ['endirimler', '💰 Endirimlər'],
-    ['hesabat', '📊 Hesabat'], ['qrafikler', '📈 Qrafiklər'],
-    ['ayarlar', '⚙️ Ayarlar'], ['sifirla', '🗑️ Sıfırla']
+    ['isciler', '👥 İşçilər'], 
+    ['aktivlik', '📋 Aktivlik'],
+    ['selforders', '🛒 SelfOrders'],
+    ['alislar', '🛒 Alışlar'], 
+    ['endirimler', '💰 Endirimlər'],
+    ['hesabat', '📊 Hesabat'], 
+    ['qrafikler', '📈 Qrafiklər'],
+    ['ayarlar', '⚙️ Ayarlar'], 
+    ['sifirla', '🗑️ Sıfırla']
 ];
 
 function adminPanel() {
@@ -1220,9 +1229,15 @@ function ad_render() {
         h('button', {className: 'tab' + (i === 0 ? ' active' : ''), onclick: e => ad_tabSec(k, e.target)}, l)));
     c.appendChild(tabs);
     AD_TABS.forEach(([k], i) => c.appendChild(h('div', {className: 'panel' + (i === 0 ? ' active' : ''), id: 'ad-p-' + k})));
-    ad_renderIsciler(); ad_renderAktiv(); ad_renderAlislar();
-    ad_renderEndirimler(); ad_renderHesabat();
-    ad_renderQrafikler(); ad_renderAyarlar(); ad_renderSifirla();
+    ad_renderIsciler(); 
+    ad_renderAktivlik(); 
+    ad_renderSelfOrders();
+    ad_renderAlislar();
+    ad_renderEndirimler(); 
+    ad_renderHesabat();
+    ad_renderQrafikler(); 
+    ad_renderAyarlar(); 
+    ad_renderSifirla();
 }
 
 function ad_tabSec(tab, btn) {
@@ -1231,10 +1246,13 @@ function ad_tabSec(tab, btn) {
     AD_TABS.forEach(([t]) => document.getElementById('ad-p-' + t).classList.toggle('active', t === tab));
     if (tab === 'qrafikler') setTimeout(ad_qrafikYukle, 100);
     if (tab === 'sifirla') ad_sifirlaStatistika();
-    if (tab === 'aktiv') ad_aktivMasalariYukle();
+    if (tab === 'aktivlik') ad_aktivlikYukle();
+    if (tab === 'selforders') ad_selfOrdersYukle();
 }
 
+// ============================================================
 // İŞÇİLƏR
+// ============================================================
 function ad_renderIsciler() {
     const c = document.getElementById('ad-p-isciler');
     c.innerHTML = '';
@@ -1331,47 +1349,91 @@ async function ad_isciDuzelis(id) {
     setTimeout(ad_iscileriYukle, 300);
 }
 
-// AKTİV MASALAR
-function ad_renderAktiv() {
-    const c = document.getElementById('ad-p-aktiv');
+// ============================================================
+// AKTİVLİK — Aktiv Masalar + Aktiv Paketlər
+// ============================================================
+function ad_renderAktivlik() {
+    const c = document.getElementById('ad-p-aktivlik');
     c.innerHTML = '';
-    c.appendChild(h('h3', {className: 's-title'}, '📋 Aktiv Masalar'));
+    c.appendChild(h('h3', {className: 's-title'}, '📋 Aktivlik'));
     c.appendChild(h('div', {className: 'form'}, h('button', {style: 'background:#27ae60;', onclick: () => window.print()}, '🖨️ Çap et')));
+    
+    c.appendChild(h('h4', {className: 'bolme-basliq'}, '🍽️ Aktiv Masalar'));
     c.appendChild(h('div', {id: 'ad-aktivMasalarList'}));
-    ad_aktivMasalariYukle();
+    
+    c.appendChild(h('h4', {className: 'bolme-basliq paket-basliq', style: 'margin-top:30px;'}, '📦 Aktiv Paketlər'));
+    c.appendChild(h('div', {id: 'ad-aktivPaketlerList'}));
+    
+    ad_aktivlikYukle();
 }
 
-function ad_aktivMasalariYukle() {
-    const sess = DATA.sessiyalar.filter(s => s.status === 'aktiv');
-    const el = document.getElementById('ad-aktivMasalarList');
-    if (!el) return;
-    el.innerHTML = '';
-    if (!sess.length) {
-        el.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:40px;'}, '✅ Aktiv masa yoxdur'));
-        return;
+function ad_aktivlikYukle() {
+    // Masalar
+    const sessMasalar = DATA.sessiyalar.filter(s => s.status === 'aktiv' && s.tip === 'masa');
+    const elM = document.getElementById('ad-aktivMasalarList');
+    if (elM) {
+        elM.innerHTML = '';
+        if (!sessMasalar.length) {
+            elM.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:20px;'}, '✅ Aktiv masa yoxdur'));
+        } else {
+            sessMasalar.sort((a, b) => b.id - a.id).forEach(s => {
+                const sif = DATA.sifarisler.filter(x => x.sessiya_id === s.id);
+                const tbl = h('table', {style: 'margin-top:15px;'},
+                    h('thead', {}, h('tr', {}, ...['Məhsul', 'Miqdar', 'Qiymət', 'Məbləğ', 'Saat', 'Sil'].map(t => h('th', {}, t)))),
+                    h('tbody', {}, ...sif.map(x => h('tr', {},
+                        h('td', {}, x.mehsul_ad), h('td', {}, x.miqdar), h('td', {}, pul(x.qiymet)),
+                        h('td', {style: 'color:#e94560;font-weight:bold;'}, pul(x.mebleg)),
+                        h('td', {style: 'color:#aaa;font-size:12px;'}, new Date(x.tarix).toLocaleTimeString('az-AZ')),
+                        h('td', {}, h('button', {className: 'small-btn del-b', onclick: () => ad_sifarisSil(x.id)}, '🗑️'))))));
+                elM.appendChild(h('div', {className: 'aktiv-masa-kart'},
+                    h('div', {className: 'aktiv-masa-header'},
+                        h('div', {},
+                            h('div', {className: 'aktiv-masa-ad'}, s.masa_ad),
+                            h('div', {className: 'aktiv-masa-info'}, `👤 ${s.isci_ad} · 🍽️ ${sif.length} sifariş`),
+                            h('div', {className: 'aktiv-masa-timer'}, h('span', {}, '⏱️'),
+                                h('span', {className: 'aktiv-timer', 'data-baslama': s.baslama}, '00:00:00'))),
+                        h('div', {className: 'aktiv-masa-mebleg'}, pul(s.yekun))),
+                    sif.length ? tbl : h('p', {style: 'color:#aaa;padding:10px;'}, 'Sifariş yoxdur'),
+                    h('div', {className: 'aktiv-masa-btnler'},
+                        h('button', {className: 'small-btn', style: 'background:#e74c3c;', onclick: () => ad_masaBosalt(s.id)}, '🗑️ Boşalt'))
+                ));
+            });
+        }
     }
-    sess.sort((a, b) => b.id - a.id).forEach(s => {
-        const sif = DATA.sifarisler.filter(x => x.sessiya_id === s.id);
-        const tbl = h('table', {style: 'margin-top:15px;'},
-            h('thead', {}, h('tr', {}, ...['Məhsul', 'Miqdar', 'Qiymət', 'Məbləğ', 'Saat', 'Sil'].map(t => h('th', {}, t)))),
-            h('tbody', {}, ...sif.map(x => h('tr', {},
-                h('td', {}, x.mehsul_ad), h('td', {}, x.miqdar), h('td', {}, pul(x.qiymet)),
-                h('td', {style: 'color:#e94560;font-weight:bold;'}, pul(x.mebleg)),
-                h('td', {style: 'color:#aaa;font-size:12px;'}, new Date(x.tarix).toLocaleTimeString('az-AZ')),
-                h('td', {}, h('button', {className: 'small-btn del-b', onclick: () => ad_sifarisSil(x.id)}, '🗑️'))))));
-        el.appendChild(h('div', {className: 'aktiv-masa-kart'},
-            h('div', {className: 'aktiv-masa-header'},
-                h('div', {},
-                    h('div', {className: 'aktiv-masa-ad'}, s.tip === 'paket' ? '📦 Paket #' + s.paket_nomre : s.masa_ad),
-                    h('div', {className: 'aktiv-masa-info'}, `👤 ${s.isci_ad} · 🍽️ ${sif.length} sifariş`),
-                    h('div', {className: 'aktiv-masa-timer'}, h('span', {}, '⏱️'),
-                        h('span', {className: 'aktiv-timer', 'data-baslama': s.baslama}, '00:00:00'))),
-                h('div', {className: 'aktiv-masa-mebleg'}, pul(s.yekun))),
-            sif.length ? tbl : h('p', {style: 'color:#aaa;padding:10px;'}, 'Sifariş yoxdur'),
-            h('div', {className: 'aktiv-masa-btnler'},
-                h('button', {className: 'small-btn', style: 'background:#e74c3c;', onclick: () => ad_masaBosalt(s.id)}, '🗑️ Boşalt'))
-        ));
-    });
+    
+    // Paketlər
+    const sessPaketler = DATA.sessiyalar.filter(s => s.status === 'aktiv' && s.tip === 'paket');
+    const elP = document.getElementById('ad-aktivPaketlerList');
+    if (elP) {
+        elP.innerHTML = '';
+        if (!sessPaketler.length) {
+            elP.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:20px;'}, '✅ Aktiv paket yoxdur'));
+        } else {
+            sessPaketler.sort((a, b) => b.id - a.id).forEach(s => {
+                const sif = DATA.sifarisler.filter(x => x.sessiya_id === s.id);
+                const tbl = h('table', {style: 'margin-top:15px;'},
+                    h('thead', {}, h('tr', {}, ...['Məhsul', 'Miqdar', 'Qiymət', 'Məbləğ', 'Saat', 'Sil'].map(t => h('th', {}, t)))),
+                    h('tbody', {}, ...sif.map(x => h('tr', {},
+                        h('td', {}, x.mehsul_ad), h('td', {}, x.miqdar), h('td', {}, pul(x.qiymet)),
+                        h('td', {style: 'color:#e94560;font-weight:bold;'}, pul(x.mebleg)),
+                        h('td', {style: 'color:#aaa;font-size:12px;'}, new Date(x.tarix).toLocaleTimeString('az-AZ')),
+                        h('td', {}, h('button', {className: 'small-btn del-b', onclick: () => ad_sifarisSil(x.id)}, '🗑️'))))));
+                elP.appendChild(h('div', {className: 'aktiv-masa-kart', style: 'border-color:rgba(243,156,18,0.5);'},
+                    h('div', {className: 'aktiv-masa-header'},
+                        h('div', {},
+                            h('div', {className: 'aktiv-masa-ad', style: 'color:#f39c12;'}, '📦 Paket #' + s.paket_nomre),
+                            h('div', {className: 'aktiv-masa-info'}, `👤 ${s.isci_ad} · ${s.musteri_ad || '-'} · 📞 ${s.musteri_tel || '-'}`),
+                            h('div', {className: 'aktiv-masa-info', style: 'color:#f39c12;margin-top:5px;'}, '📍 ' + (s.unvan || '-')),
+                            h('div', {className: 'aktiv-masa-timer'}, h('span', {}, '⏱️'),
+                                h('span', {className: 'aktiv-timer', 'data-baslama': s.baslama}, '00:00:00'))),
+                        h('div', {className: 'aktiv-masa-mebleg'}, pul(s.yekun))),
+                    sif.length ? tbl : h('p', {style: 'color:#aaa;padding:10px;'}, 'Sifariş yoxdur'),
+                    h('div', {className: 'aktiv-masa-btnler'},
+                        h('button', {className: 'small-btn', style: 'background:#e74c3c;', onclick: () => ad_masaBosalt(s.id)}, '🗑️ Boşalt'))
+                ));
+            });
+        }
+    }
     timerBaslat();
 }
 
@@ -1398,7 +1460,7 @@ async function ad_sifarisSil(id) {
         } catch (err) {
             toast('❌ Xəta: ' + err.message, 'error', 5000);
         }
-        setTimeout(ad_aktivMasalariYukle, 300);
+        setTimeout(ad_aktivlikYukle, 300);
     }, 'Sifarişi sil', '🗑️');
 }
 
@@ -1411,11 +1473,103 @@ async function ad_masaBosalt(id) {
         } catch (err) {
             toast('❌ Xəta: ' + err.message, 'error', 5000);
         }
-        setTimeout(ad_aktivMasalariYukle, 300);
+        setTimeout(ad_aktivlikYukle, 300);
     }, 'Masanı boşalt', '🗑️');
 }
 
+// ============================================================
+// 🆕 SELF ORDERS — QR Sifarişləri
+// ============================================================
+function ad_renderSelfOrders() {
+    const c = document.getElementById('ad-p-selforders');
+    c.innerHTML = '';
+    c.appendChild(h('h3', {className: 's-title'}, '📱 QR Self-Order Sifarişləri'));
+    c.appendChild(h('div', {className: 'form'},
+        h('button', {style: 'background:#3498db;', onclick: () => ad_selfOrdersYukle()}, '🔄 Yenilə')
+    ));
+    c.appendChild(h('div', {id: 'ad-selfOrdersList'}));
+    ad_selfOrdersYukle();
+}
+
+function ad_selfOrdersYukle() {
+    const el = document.getElementById('ad-selfOrdersList');
+    if (!el) return;
+    el.innerHTML = '';
+    const selfOrders = DATA.selfOrders.slice().sort((a, b) => b.id - a.id);
+    if (!selfOrders.length) {
+        el.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:40px;'}, '📱 QR sifarişi yoxdur'));
+        return;
+    }
+    selfOrders.forEach(so => {
+        const statusReng = {
+            'gozlemede': '#f39c12',
+            'qebul': '#3498db',
+            'hazirlanir': '#9b59b6',
+            'hazir': '#2ecc71',
+            'catdirildi': '#27ae60',
+            'legv': '#e74c3c'
+        }[so.status] || '#aaa';
+        const statusAd = {
+            'gozlemede': '⏳ Gözləmədə',
+            'qebul': '✅ Qəbul edildi',
+            'hazirlanir': '🍳 Hazırlanır',
+            'hazir': '🎉 Hazır',
+            'catdirildi': '📦 Çatdırıldı',
+            'legv': '❌ Ləğv edildi'
+        }[so.status] || so.status;
+        
+        const mehsulCedveli = h('table', {style: 'margin-top:10px;'},
+            h('thead', {}, h('tr', {}, h('th', {}, 'Məhsul'), h('th', {}, 'Miqdar'), h('th', {}, 'Qiymət'), h('th', {}, 'Məbləğ'))),
+            h('tbody', {}, ...so.mehsullar.map(x => h('tr', {},
+                h('td', {}, x.ad), h('td', {}, x.miqdar), h('td', {}, pul(x.q)), h('td', {style: 'color:#e94560;'}, pul(x.q * x.miqdar))
+            )))
+        );
+        
+        const btnler = h('div', {className: 'aktiv-masa-btnler', style: 'margin-top:15px;'},
+            so.status === 'gozlemede' ? h('button', {className: 'small-btn', style: 'background:#3498db;', onclick: () => ad_selfOrderStatus(so.id, 'qebul')}, '✅ Qəbul et') : null,
+            so.status === 'qebul' ? h('button', {className: 'small-btn', style: 'background:#9b59b6;', onclick: () => ad_selfOrderStatus(so.id, 'hazirlanir')}, '🍳 Hazırlanır') : null,
+            so.status === 'hazirlanir' ? h('button', {className: 'small-btn', style: 'background:#2ecc71;', onclick: () => ad_selfOrderStatus(so.id, 'hazir')}, '🎉 Hazır') : null,
+            so.status === 'hazir' ? h('button', {className: 'small-btn', style: 'background:#27ae60;', onclick: () => ad_selfOrderStatus(so.id, 'catdirildi')}, '📦 Çatdırıldı') : null,
+            (so.status !== 'legv' && so.status !== 'catdirildi') ? h('button', {className: 'small-btn', style: 'background:#e74c3c;', onclick: () => ad_selfOrderStatus(so.id, 'legv')}, '❌ Ləğv') : null
+        );
+        
+        el.appendChild(h('div', {className: 'aktiv-masa-kart', style: `border-color:${statusReng};`},
+            h('div', {className: 'aktiv-masa-header'},
+                h('div', {},
+                    h('div', {className: 'aktiv-masa-ad', style: `color:${statusReng};`}, 
+                        so.tip === 'masa' ? `🍽️ ${so.masa_ad}` : `🚶 Özümlə — ${so.musteri_ad}`
+                    ),
+                    h('div', {className: 'aktiv-masa-info'}, 
+                        so.tip === 'masa' ? `Masa sifarişi · ${new Date(so.tarix).toLocaleString('az-AZ')}` : `📞 ${so.musteri_tel} · ${new Date(so.tarix).toLocaleString('az-AZ')}`
+                    ),
+                    h('div', {style: `display:inline-block; margin-top:8px; padding:4px 12px; border-radius:20px; background:${statusReng}25; border:1px solid ${statusReng}; color:${statusReng}; font-size:13px; font-weight:bold;`}, statusAd)
+                ),
+                h('div', {className: 'aktiv-masa-mebleg'}, pul(so.toplam))
+            ),
+            mehsulCedveli, btnler
+        ));
+    });
+}
+
+async function ad_selfOrderStatus(id, status) {
+    const so = DATA.selfOrders.find(x => x.id === id);
+    if (!so) return;
+    const mesaj = status === 'legv' ? 'Bu QR sifarişini ləğv etmək istəyirsiniz?' : `Statusu "${status}" etmək istəyirsiniz?`;
+    confirmDialog(mesaj, async cavab => {
+        if (!cavab) return;
+        try {
+            await FB.update(DR('selfOrders/' + id), {status});
+            toast('✅ Status yeniləndi', 'success');
+        } catch (err) {
+            toast('❌ Xəta: ' + err.message, 'error', 5000);
+        }
+        setTimeout(ad_selfOrdersYukle, 300);
+    }, 'Status yenilə', '🔄');
+}
+
+// ============================================================
 // ALIŞLAR
+// ============================================================
 function ad_renderAlislar() {
     const c = document.getElementById('ad-p-alislar');
     c.innerHTML = '';
@@ -1517,6 +1671,7 @@ function ad_renderHesabat() {
         h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-umumiSatis'}, '0.00 ₼'), h('div', {className: 'l'}, 'Ümumi Satış')),
         h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-masaSatis'}, '0.00 ₼'), h('div', {className: 'l'}, '🍽️ Masa')),
         h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-paketSatis'}, '0.00 ₼'), h('div', {className: 'l'}, '📦 Paket')),
+        h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-selfSatis'}, '0.00 ₼'), h('div', {className: 'l'}, '📱 QR Self')),
         h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-sifarisSayi'}, '0'), h('div', {className: 'l'}, 'Sifariş Sayı')),
         h('div', {className: 'stat'}, h('div', {className: 'v', id: 'ad-endirimliSayi'}, '0'), h('div', {className: 'l'}, 'Endirimli'))));
     c.appendChild(h('h4', {className: 'bolme-basliq'}, '🍽️ Masa Sifarişləri (İşçi üzrə)'));
@@ -1525,6 +1680,8 @@ function ad_renderHesabat() {
         h('tbody', {id: 'ad-hesabatTable'})));
     c.appendChild(h('h4', {className: 'bolme-basliq paket-basliq'}, '📦 Paket Sifarişləri'));
     c.appendChild(h('div', {id: 'ad-hesabatPaketWrap'}));
+    c.appendChild(h('h4', {className: 'bolme-basliq', style: 'background:rgba(52,152,219,0.15);border-left-color:#3498db;'}, '📱 QR Self-Order Sifarişləri'));
+    c.appendChild(h('div', {id: 'ad-hesabatSelfWrap'}));
     ad_hesabatYukle();
 }
 
@@ -1537,8 +1694,9 @@ function ad_hesabatYukle() {
     const sess = DATA.sessiyalar.filter(s => gun(s.baslama) === t);
     const alislar = DATA.alislar.filter(a => gun(a.tarix) === t);
     const end = DATA.endirimler.filter(e => gun(e.tarix) === t);
+    const self = DATA.selfOrders.filter(s => gun(s.tarix) === t && s.status !== 'legv');
 
-    let umumi = 0, masaSatis = 0, paketSatis = 0, endirimli = 0;
+    let umumi = 0, masaSatis = 0, paketSatis = 0, selfSatis = 0, endirimli = 0;
     const netice = isciler.map(i => {
         const ms = sif.filter(s => s.isci_id === i.id && s.masa_id !== null);
         const ps = sess.filter(s => s.isci_id === i.id && s.tip === 'paket');
@@ -1550,11 +1708,15 @@ function ad_hesabatYukle() {
         if (en.length) endirimli++;
         return {i, ms, as, en, mm, am: cem(as, a => a.cemi), endM: cem(en, e => e.endirim), umumi: mm + pm};
     }).sort((a, b) => b.umumi - a.umumi);
+    
+    selfSatis = cem(self, s => s.toplam);
+    umumi += selfSatis;
 
     document.getElementById('ad-umumiSatis').textContent = pul(umumi);
     document.getElementById('ad-masaSatis').textContent = pul(masaSatis);
     document.getElementById('ad-paketSatis').textContent = pul(paketSatis);
-    document.getElementById('ad-sifarisSayi').textContent = sif.length;
+    document.getElementById('ad-selfSatis').textContent = pul(selfSatis);
+    document.getElementById('ad-sifarisSayi').textContent = sif.length + self.length;
     document.getElementById('ad-endirimliSayi').textContent = endirimli;
 
     const tb = document.getElementById('ad-hesabatTable');
@@ -1571,6 +1733,7 @@ function ad_hesabatYukle() {
             h('td', {style: 'color:#2ecc71;font-weight:bold;'}, pul(n.umumi)))));
     }
 
+    // Paket cədvəli
     const pw = document.getElementById('ad-hesabatPaketWrap');
     pw.innerHTML = '';
     const paketler = DATA.sessiyalar.filter(s => s.tip === 'paket' && gun(s.baslama) === t);
@@ -1591,9 +1754,31 @@ function ad_hesabatYukle() {
             h('thead', {}, h('tr', {}, ...['Nömrə', 'Müştəri', 'Telefon', 'Ünvan', 'İşçi', 'Məbləğ', 'Endirim', 'Status', 'Tarix'].map(t => h('th', {}, t)))),
             tbody));
     }
+    
+    // Self-Order cədvəli
+    const sw = document.getElementById('ad-hesabatSelfWrap');
+    sw.innerHTML = '';
+    if (!self.length) {
+        sw.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:20px;'}, 'Bu tarixdə QR sifarişi yoxdur'));
+    } else {
+        const tbody = h('tbody', {});
+        self.slice().sort((a, b) => b.id - a.id).forEach(s => tbody.appendChild(h('tr', {},
+            h('td', {}, s.tip === 'masa' ? '🍽️ ' + s.masa_ad : '🚶 Özümlə'),
+            h('td', {}, s.musteri_ad || '-'),
+            h('td', {}, s.musteri_tel || '-'),
+            h('td', {style: 'color:#2ecc71;font-weight:bold;'}, pul(s.toplam)),
+            h('td', {}, s.mehsullar.map(x => `${x.ad} x${x.miqdar}`).join(', ')),
+            h('td', {}, tarixFormat(s.tarix))
+        )));
+        sw.appendChild(h('table', {},
+            h('thead', {}, h('tr', {}, ...['Tip', 'Müştəri', 'Telefon', 'Məbləğ', 'Məhsullar', 'Tarix'].map(t => h('th', {}, t)))),
+            tbody));
+    }
 }
 
+// ============================================================
 // QRAFİKLƏR
+// ============================================================
 function ad_renderQrafikler() {
     const c = document.getElementById('ad-p-qrafikler');
     c.innerHTML = '';
@@ -1606,6 +1791,7 @@ function ad_renderQrafikler() {
     c.appendChild(graf('🍽️ Kateqoriya üzrə Satış', 'ad-kateqoriyaChart'));
     c.appendChild(graf('📦 Paket Satışları', 'ad-paketChart'));
     c.appendChild(graf('🛒 Günlük Alışlar', 'ad-alisChart'));
+    c.appendChild(graf('📱 QR Self-Order Satışları (Son 7 gün)', 'ad-selfChart'));
 }
 
 function cz(key, id, cfg) {
@@ -1621,6 +1807,7 @@ const sade = {responsive: true, maintainAspectRatio: false};
 function ad_qrafikYukle() {
     const sif = DATA.sifarisler, sess = DATA.sessiyalar, alislar = DATA.alislar;
     const end = DATA.endirimler, isciler = DATA.isciler.filter(i => i.rol !== 'admin');
+    const self = DATA.selfOrders.filter(s => s.status !== 'legv');
 
     const son7 = fn => {
         const r = [];
@@ -1642,7 +1829,7 @@ function ad_qrafikYukle() {
     });
 
     xett('umumi', 'ad-umumiChart',
-        son7(t => cem(sif.filter(s => gun(s.tarix) === t), s => s.mebleg) - cem(end.filter(e => gun(e.tarix) === t), e => e.endirim)),
+        son7(t => cem(sif.filter(s => gun(s.tarix) === t), s => s.mebleg) - cem(end.filter(e => gun(e.tarix) === t), e => e.endirim) + cem(self.filter(s => gun(s.tarix) === t), s => s.toplam)),
         'Satış (₼)', '#e94560', 'rgba(233,69,96,0.3)');
 
     const isciData = isciler.map(i => ({ad: i.ad, mebleg: cem(sif.filter(s => s.isci_id === i.id), s => s.mebleg) - cem(end.filter(e => e.isci_id === i.id), e => e.endirim)})).filter(i => i.mebleg > 0);
@@ -1677,6 +1864,7 @@ function ad_qrafikYukle() {
 
     sutun('paket', 'ad-paketChart', son7(t => cem(sess.filter(s => s.tip === 'paket' && gun(s.baslama) === t), p => p.yekun)), 'Paket (₼)', '#f39c12');
     xett('alis', 'ad-alisChart', son7(t => cem(alislar.filter(a => gun(a.tarix) === t), a => a.cemi)), 'Alış (₼)', '#e74c3c', 'rgba(231,76,60,0.2)');
+    sutun('self', 'ad-selfChart', son7(t => cem(self.filter(s => gun(s.tarix) === t), s => s.toplam)), 'QR Self-Order (₼)', '#3498db');
 }
 
 // AYARLAR
@@ -1728,6 +1916,7 @@ function ad_renderSifirla() {
         h('button', {className: 'sifirla-btn danger' + (full ? ' big' : ''), onclick: () => ad_sifirla(key)}, '🗑️ Sıfırla'));
     grid.appendChild(mk('📋', 'Masaları Sıfırla', 'Bütün masa sifarişləri + sessiyalar', 'masalar'));
     grid.appendChild(mk('📦', 'Paketləri Sıfırla', 'Bütün paketlər', 'paketler'));
+    grid.appendChild(mk('📱', 'QR Self-Orderları Sıfırla', 'Bütün QR sifarişləri', 'selforders'));
     grid.appendChild(mk('🛒', 'Alışları Sıfırla', 'Bütün alış qeydləri', 'alislar'));
     grid.appendChild(mk('👥', 'İşçiləri Sil', 'Admin istisna, bütün işçilər', 'isciler'));
     grid.appendChild(mk('⚠️', 'HƏR ŞEYİ SIFIRLA', 'Bütün məlumatlar silinəcək', 'her-sey', true));
@@ -1747,6 +1936,7 @@ async function ad_sifirla(no) {
     const mesaj = {
         'masalar': '⚠️ Bütün masa sifarişləri silinəcək!',
         'paketler': '⚠️ Bütün paketlər silinəcək!',
+        'selforders': '⚠️ Bütün QR sifarişləri silinəcək!',
         'alislar': '⚠️ Bütün alışlar silinəcək!',
         'isciler': '⚠️ Bütün işçilər silinəcək!',
         'her-sey': '🚨 HƏR ŞEY SİLİNƏCƏK!'
@@ -1775,6 +1965,10 @@ async function ad_sifirla(no) {
                 for (const s of DATA.sessiyalar.filter(s => s.tip === 'paket')) await FB.remove(DR('sessiyalar/' + s.id));
                 await sayacSifirla('paket');
             }
+            if (no === 'selforders') {
+                for (const s of DATA.selfOrders) await FB.remove(DR('selfOrders/' + s.id));
+                await sayacSifirla('selforder');
+            }
             if (no === 'alislar') {
                 for (const a of DATA.alislar) await FB.remove(DR('alislar/' + a.id));
             }
@@ -1783,12 +1977,12 @@ async function ad_sifirla(no) {
                 for (const i of DATA.isciler.filter(x => x.rol !== 'admin')) await FB.remove(DR('isciler/' + i.id));
             }
             if (no === 'her-sey') {
-                for (const k of ['sifarisler', 'sessiyalar', 'alislar', 'endirimler']) {
-                    for (const x of DATA[k]) await FB.remove(DR(k + '/' + x.id));
+                for (const k of ['sifarisler', 'sessiyalar', 'alislar', 'endirimler', 'selfOrders']) {
+                    for (const x of DATA[k] || []) await FB.remove(DR(k + '/' + x.id));
                 }
                 for (const i of DATA.isciler.filter(x => x.rol !== 'admin')) await FB.remove(DR('isciler/' + i.id));
                 await masalariBosalt();
-                await FB.set(DR('sayac'), {sifaris: 1, sessiya: 1, isci: 2, alis: 1, endirim: 1, paket: 1});
+                await FB.set(DR('sayac'), {sifaris: 1, sessiya: 1, isci: 2, alis: 1, endirim: 1, paket: 1, selforder: 1});
             }
             toast('✅ Sıfırlandı!', 'success');
         } catch (err) {
@@ -1796,6 +1990,215 @@ async function ad_sifirla(no) {
         }
         setTimeout(() => ad_render(), 500);
     }, 'Sıfırlama', '⚠️');
+}
+
+// ============================================================
+// 🆕 QR SELF-ORDER — Müştəri səhifələri
+// ============================================================
+let QR = {
+    tip: null,
+    masaId: null,
+    masaAd: '',
+    musteri_ad: '',
+    musteri_tel: '',
+    sebet: []
+};
+
+function qrSecimEkrani() {
+    app.innerHTML = '';
+    const box = h('div', {style: 'min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:20px; gap:30px;'},
+        h('div', {style: 'text-align:center;'},
+            h('h1', {style: 'font-size:60px; margin-bottom:10px;'}, '🍽️'),
+            h('h2', {style: 'font-size:26px; color:#fff;'}, 'Xoş gəldiniz!'),
+            h('p', {style: 'color:#aaa; margin-top:10px; font-size:15px;'}, 'Necə istəyirsiniz?')
+        ),
+        h('div', {style: 'display:flex; flex-direction:column; gap:20px; width:100%; max-width:400px;'},
+            h('div', {
+                style: 'background:linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03)); border:2px solid rgba(255,255,255,0.15); border-radius:20px; padding:40px 30px; text-align:center; cursor:pointer; transition:0.3s;',
+                onclick: () => qrMasaSecimi()
+            },
+                h('div', {style: 'font-size:70px; margin-bottom:15px;'}, '🍽️'),
+                h('div', {style: 'font-size:24px; font-weight:bold; color:#fff;'}, 'Masada oturacam'),
+                h('div', {style: 'font-size:14px; color:#bbb; margin-top:8px;'}, 'Masa nömrəsini seçin')
+            ),
+            h('div', {
+                style: 'background:linear-gradient(145deg, rgba(255,255,255,0.1), rgba(255,255,255,0.03)); border:2px solid rgba(255,255,255,0.15); border-radius:20px; padding:40px 30px; text-align:center; cursor:pointer; transition:0.3s;',
+                onclick: () => qrPaketSecimi()
+            },
+                h('div', {style: 'font-size:70px; margin-bottom:15px;'}, '🚶'),
+                h('div', {style: 'font-size:24px; font-weight:bold; color:#fff;'}, 'Özümlə aparacam'),
+                h('div', {style: 'font-size:14px; color:#bbb; margin-top:8px;'}, 'Ad və telefon daxil edin')
+            )
+        )
+    );
+    app.appendChild(box);
+}
+
+function qrMasaSecimi() {
+    app.innerHTML = '';
+    const masalar = DATA.masalar.filter(m => m.nov === 'masa').sort((a, b) => a.id - b.id);
+    const box = h('div', {style: 'min-height:100vh; padding:20px;'},
+        h('div', {style: 'text-align:center; margin-bottom:25px; padding-top:20px;'},
+            h('h2', {style: 'font-size:22px; color:#fff;'}, '🍽️ Masa seçin'),
+            h('p', {style: 'color:#aaa; margin-top:5px; font-size:13px;'}, 'Oturduğunuz masanı seçin')
+        ),
+        h('div', {className: 'masalar', style: 'max-width:600px; margin:0 auto;'},
+            ...masalar.map(m => h('div', {
+                className: 'masa',
+                style: 'cursor:pointer;',
+                onclick: () => {
+                    QR.tip = 'masa';
+                    QR.masaId = m.id;
+                    QR.masaAd = m.ad;
+                    QR.sebet = [];
+                    qrMenyuEkrani();
+                }
+            },
+                h('div', {className: 'ad'}, m.ad)
+            ))
+        ),
+        h('button', {
+            className: 's-btn b-geri',
+            style: 'max-width:600px; margin:20px auto 0;',
+            onclick: () => qrSecimEkrani()
+        }, '← Geri')
+    );
+    app.appendChild(box);
+}
+
+function qrPaketSecimi() {
+    app.innerHTML = '';
+    const adInput = h('input', {type: 'text', placeholder: 'Adınız', style: 'width:100%; padding:15px; border-radius:12px; border:none; background:#fff; color:#000; font-size:16px;'});
+    const telInput = h('input', {type: 'tel', placeholder: 'Telefon nömrəniz', style: 'width:100%; padding:15px; border-radius:12px; border:none; background:#fff; color:#000; font-size:16px;'});
+    const box = h('div', {style: 'min-height:100vh; padding:20px; display:flex; flex-direction:column; justify-content:center;'},
+        h('div', {style: 'max-width:400px; margin:0 auto; width:100%;'},
+            h('h2', {style: 'font-size:22px; color:#fff; text-align:center; margin-bottom:20px;'}, '🚶 Özümlə aparacam'),
+            h('p', {style: 'color:#aaa; text-align:center; margin-bottom:20px; font-size:13px;'}, 'Adınızı və telefonunuzu daxil edin'),
+            h('div', {style: 'display:flex; flex-direction:column; gap:15px;'},
+                adInput, telInput,
+                h('button', {
+                    className: 's-btn b-tamam',
+                    onclick: () => {
+                        const ad = adInput.value.trim();
+                        const tel = telInput.value.trim();
+                        if (!ad) { toast('❌ Adınızı daxil edin!', 'error'); return; }
+                        if (!tel) { toast('❌ Telefonunuzu daxil edin!', 'error'); return; }
+                        QR.tip = 'paket';
+                        QR.musteri_ad = ad;
+                        QR.musteri_tel = tel;
+                        QR.sebet = [];
+                        qrMenyuEkrani();
+                    }
+                }, '✅ Davam et'),
+                h('button', {
+                    className: 's-btn b-geri',
+                    onclick: () => qrSecimEkrani()
+                }, '← Geri')
+            )
+        )
+    );
+    app.appendChild(box);
+}
+
+function qrMenyuEkrani() {
+    app.innerHTML = '';
+    const basliq = QR.tip === 'masa' ? `🍽️ ${QR.masaAd}` : `🚶 Özümlə aparacam`;
+    
+    app.appendChild(h('div', {className: 'header'},
+        h('h2', {}, basliq),
+        h('div', {className: 'info'},
+            h('span', {className: 'user-name', style: 'background:rgba(46,204,113,0.2); border-color:rgba(46,204,113,0.4);'}, '👤 Müştəri')
+        )
+    ));
+    app.appendChild(h('div', {className: 'container', id: 'qr-container'}));
+    
+    const c = document.getElementById('qr-container');
+    c.innerHTML = '';
+    
+    const sebetPanelFn = () => h('div', {className: 'sebet'},
+        h('h3', {}, '🛒 Səbətiniz'),
+        h('div', {id: 'qr-sebetItems'}),
+        h('div', {className: 'toplam'}, h('span', {}, 'Toplam:'), h('span', {id: 'qr-toplam'}, '0.00 ₼'))
+    );
+    
+    const katsEl = h('div', {className: 'kats'});
+    const mehsEl = h('div', {className: 'mehsullar'});
+    c.appendChild(h('div', {className: 'menyu-wrap'}, h('div', {}, katsEl, mehsEl), sebetPanelFn()));
+    
+    c.appendChild(h('div', {className: 'alt-duymeler', style: 'grid-template-columns:1fr 1fr;'},
+        h('button', {className: 's-btn b-tamam', onclick: () => qrSifarisTamamla()}, '📤 Sifariş ver'),
+        h('button', {className: 's-btn b-geri', onclick: () => qrSecimEkrani()}, '← Geri')
+    ));
+    
+    let ilkKat = null;
+    const sec = (k, btn) => {
+        katsEl.querySelectorAll('.kat').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        mehsEl.innerHTML = '';
+        Object.entries(MENYU[k]).forEach(([ad, q]) => mehsEl.appendChild(
+            h('div', {className: 'mehsul', onclick: () => {
+                const m = QR.sebet.find(x => x.ad === ad);
+                if (m) m.miqdar++; else QR.sebet.push({ad, q, miqdar: 1});
+                qrSebetYenile();
+                toast(`✅ ${ad} əlavə edildi`, 'success', 1500);
+            }}, h('div', {className: 'ad'}, ad), h('div', {className: 'q'}, pul(q)))
+        ));
+    };
+    
+    YEMEKLER.concat(ICKILER).forEach(k => {
+        const b = h('button', {className: 'kat', onclick: () => sec(k, b)}, k);
+        if (!ilkKat) ilkKat = b;
+        katsEl.appendChild(b);
+    });
+    sec(YEMEKLER[0], ilkKat);
+    qrSebetYenile();
+}
+
+function qrSebetYenile() {
+    const el = document.getElementById('qr-sebetItems');
+    if (!el) return;
+    el.innerHTML = '';
+    if (!QR.sebet.length) {
+        el.appendChild(h('p', {style: 'color:#aaa;text-align:center;padding:20px;'}, 'Səbət boşdur'));
+    }
+    QR.sebet.forEach((s, i) => {
+        el.appendChild(h('div', {className: 's-item'},
+            h('div', {}, `${s.ad} x${s.miqdar}`, h('br'), h('small', {style: 'color:#e94560;'}, pul(s.q * s.miqdar))),
+            h('span', {className: 'sil', onclick: () => { QR.sebet.splice(i, 1); qrSebetYenile(); }}, '✕')
+        ));
+    });
+    const t = document.getElementById('qr-toplam');
+    if (t) t.textContent = pul(cem(QR.sebet, s => s.q * s.miqdar));
+}
+
+async function qrSifarisTamamla() {
+    if (!QR.sebet.length) {
+        toast('❌ Səbət boşdur!', 'warning');
+        return;
+    }
+    try {
+        const id = await yeniId('selforder');
+        const siparis = {
+            id,
+            tip: QR.tip,
+            masa_id: QR.tip === 'masa' ? QR.masaId : null,
+            masa_ad: QR.tip === 'masa' ? QR.masaAd : '',
+            musteri_ad: QR.tip === 'paket' ? QR.musteri_ad : '',
+            musteri_tel: QR.tip === 'paket' ? QR.musteri_tel : '',
+            mehsullar: QR.sebet,
+            toplam: cem(QR.sebet, s => s.q * s.miqdar),
+            status: 'gozlemede',
+            tarix: new Date().toISOString()
+        };
+        await FB.set(DR('selfOrders/' + id), siparis);
+        toast('✅ Sifarişiniz qəbul edildi! Tezliklə hazırlanacaq.', 'success', 5000);
+        setTimeout(() => {
+            QR.sebet = [];
+            qrSecimEkrani();
+        }, 1500);
+    } catch (err) {
+        toast('❌ Xəta: ' + err.message, 'error', 5000);
+    }
 }
 
 // ============================================================
