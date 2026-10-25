@@ -220,7 +220,13 @@ function ekranYenile() {
         if (!OF.masaId) of_masaSecimCiz();
     } else if (user.rol === 'kassir' && document.getElementById('ka-container')) {
         const aktivTab = document.querySelector('#ka-container .tabs .tab.active');
-        if (aktivTab && aktivTab.textContent.includes('Paket')) paketCedveli('ka-p-paketler');
+        if (aktivTab) {
+            const tabName = aktivTab.getAttribute('data-tab');
+            if (tabName === 'masalar') ka_renderMasalar();
+            else if (tabName === 'selforders') ka_renderSelfOrders();
+            else if (tabName === 'paketler') paketCedveli('ka-p-paketler');
+            else if (tabName === 'alislar') ka_renderAlislar();
+        }
     } else if (user.rol === 'paketci' && document.getElementById('pk-container')) {
         if (!PK.sessiya) pk_render();
     }
@@ -1436,11 +1442,11 @@ function qrMenyuEkrani() {
         host.appendChild(b);
     });
     katsEl.appendChild(h('div', {style: 'font-weight:bold;color:#f39c12;margin:4px 0;width:100%;'}, '🍽️ Yeməklər'));
-    const yemeklerRow = h('div', {className: 'kats', style: 'display:flex;flex-direction:column;align-items:stretch;gap:8px;width:100%;'});
+    const yemeklerRow = h('div', {className: 'kats qr-kat-scroll', style: 'display:flex;flex-direction:column;align-items:stretch;gap:8px;width:100%;max-height:190px;overflow-y:auto;overflow-x:hidden;padding:4px 5px 4px 0;overscroll-behavior:contain;'});
     katsEl.appendChild(yemeklerRow);
     qrupCiz(yemeklerRow, YEMEKLER, '#f39c12');
     katsEl.appendChild(h('div', {style: 'font-weight:bold;color:#3498db;margin:12px 0 4px;width:100%;'}, '🥤 İçkilər'));
-    const ickilerRow = h('div', {className: 'kats', style: 'display:flex;flex-direction:column;align-items:stretch;gap:8px;width:100%;'});
+    const ickilerRow = h('div', {className: 'kats qr-kat-scroll', style: 'display:flex;flex-direction:column;align-items:stretch;gap:8px;width:100%;max-height:190px;overflow-y:auto;overflow-x:hidden;padding:4px 5px 4px 0;overscroll-behavior:contain;'});
     katsEl.appendChild(ickilerRow);
     qrupCiz(ickilerRow, ICKILER, '#3498db');
     if (YEMEKLER.length > 0) sec(YEMEKLER[0], ilkKat);
@@ -1549,15 +1555,36 @@ async function qrSifarisTamamla() {
         DATA.selfOrders = DATA.selfOrders.filter(x => x.id !== id).concat([siparis]);
         if (QR.tip === 'masa' && QR.masaId) await FB.update(DR('masalar/' + QR.masaId), {status: 'dolu'});
         QR.sebet = [];
-        toast('✅ Sifariş qəbul edildi — Hazırlanır!', 'success', 5000);
-        qrSebetYenile();
-        qrSifarisTarixiniYenile();
+        toast('✅ Sifariş qəbul edildi — masaya göndərildi!', 'success', 5000);
+        qrSifarisTesdiqEkrani(siparis);
     } catch (err) {
         console.error('❌ QR xəta:', err);
         toast('❌ Xəta: ' + err.message, 'error', 5000);
     } finally {
         QR.submitting = false;
     }
+}
+
+
+function qrSifarisTesdiqEkrani(siparis) {
+    app.innerHTML = '';
+    const mehsullar = Array.isArray(siparis.mehsullar) ? siparis.mehsullar : [];
+    const box = h('div', {style: 'min-height:100vh;padding:24px;display:flex;align-items:center;justify-content:center;'},
+        h('div', {style: 'width:100%;max-width:460px;text-align:center;padding:28px 22px;border-radius:22px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);'},
+            h('div', {style: 'font-size:64px;margin-bottom:12px;'}, '✅'),
+            h('h2', {style: 'color:#2ecc71;font-size:24px;margin-bottom:10px;'}, 'Sifarişiniz göndərildi!'),
+            h('p', {style: 'color:#ddd;line-height:1.6;margin-bottom:16px;'}, QR.tip === 'masa' ? `${QR.masaAd} üçün sifariş mətbəxə göndərildi. Masa işçi panelində dolu kimi görünəcək.` : 'Sifarişiniz qəbul edildi və hazırlanmağa göndərildi.'),
+            h('div', {style: 'text-align:left;background:rgba(0,0,0,.18);padding:14px;border-radius:12px;margin-bottom:16px;'},
+                h('strong', {style: 'display:block;margin-bottom:8px;'}, 'Sifariş xülasəsi'),
+                ...mehsullar.map(x => h('div', {style: 'display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.08);'}, h('span', {}, `${x.ad} ×${x.miqdar}`), h('span', {style: 'white-space:nowrap;'}, pul((x.q || 0) * (x.miqdar || 0))))),
+                h('div', {style: 'display:flex;justify-content:space-between;gap:10px;margin-top:12px;font-weight:bold;color:#2ecc71;'}, h('span', {}, 'Cəmi'), h('span', {}, pul(siparis.toplam || 0)))
+            ),
+            h('button', {className: 's-btn b-tamam', style: 'width:100%;margin-bottom:10px;', onclick: () => qrMenyuEkrani()}, '➕ Əlavə sifariş ver'),
+            h('button', {className: 's-btn b-geri', style: 'width:100%;margin-bottom:10px;', onclick: () => { qrMenyuEkrani(); setTimeout(() => { const d = document.querySelector('#qr-orders details'); if (d) d.open = true; const el = document.getElementById('qr-orders'); if (el) el.scrollIntoView({behavior:'smooth',block:'start'}); }, 50); }}, '📋 Sifarişlərim'),
+            h('p', {style: 'color:#aaa;font-size:12px;margin-top:10px;'}, 'Ödəniş kassada nağd və ya kartla edilir.')
+        )
+    );
+    app.appendChild(box);
 }
 
 function masaDoludur(masaId) {
@@ -1592,34 +1619,65 @@ function yenileBtn(func) {
 }
 
 function ad_butunDataniPdf() {
-    // Bütün yüklənmiş Firebase məlumatları, menyu, stok və sayğaclar çap edilə bilən hesabatda toplanır.
-    const bolmeler = [
-        ['İşçilər', DATA.isciler], ['Masalar və kabinetlər', DATA.masalar],
-        ['Sessiyalar', DATA.sessiyalar], ['Adi sifarişlər', DATA.sifarisler],
-        ['QR sifarişləri', DATA.selfOrders], ['Alışlar', DATA.alislar],
-        ['Endirimlər', DATA.endirimler], ['Menyu', MENYU],
-        ['Stok vəziyyəti', MENYU_STOK], ['Sayğaclar', DATA.sayac]
-    ];
-    const escapeHtml = value => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-    const content = bolmeler.map(([ad, data]) => {
-        const json = JSON.stringify(data ?? [], null, 2);
-        return `<section><h2>${escapeHtml(ad)} (${Array.isArray(data) ? data.length : Object.keys(data || {}).length})</h2><pre>${escapeHtml(json)}</pre></section>`;
-    }).join('');
+    const aktivTab = document.querySelector('#ad-container .tabs .tab.active');
+    const tab = aktivTab ? aktivTab.getAttribute('data-tab') : 'isciler';
+    ad_sehifePdf(tab);
+}
+
+function ad_sehifePdf(tab) {
+    const panel = document.getElementById('ad-p-' + tab);
+    if (!panel) { toast('❌ PDF üçün səhifə tapılmadı.', 'error'); return; }
     const win = window.open('', '_blank');
     if (!win) { toast('❌ PDF pəncərəsi bloklandı. Brauzerdə pop-up icazəsi verin.', 'error', 6000); return; }
+
+    const labels = Object.fromEntries(AD_TABS.map(([k, label]) => [k, label.replace(/^\S+\s*/, '')]));
+    const title = labels[tab] || 'Admin hesabatı';
+    const clone = panel.cloneNode(true);
+    clone.classList.add('pdf-print-panel');
+    clone.classList.remove('active');
+    clone.style.display = 'block';
+    clone.style.visibility = 'visible';
+    clone.style.position = 'static';
+    clone.style.width = '100%';
+    clone.style.maxWidth = 'none';
+
+    const sourceCanvases = panel.querySelectorAll('canvas');
+    const clonedCanvases = clone.querySelectorAll('canvas');
+    sourceCanvases.forEach((canvas, index) => {
+        const target = clonedCanvases[index];
+        if (!target) return;
+        try {
+            const img = document.createElement('img');
+            img.src = canvas.toDataURL('image/png');
+            img.alt = canvas.getAttribute('aria-label') || 'Qrafik';
+            img.style.cssText = 'display:block;max-width:100%;max-height:420px;margin:8px auto;object-fit:contain;';
+            target.replaceWith(img);
+        } catch (e) {}
+    });
+    clone.querySelectorAll('button, .pdf-export-btn').forEach(btn => btn.classList.add('pdf-hide'));
+    const headStyles = Array.from(document.head.querySelectorAll('style, link[rel="stylesheet"]')).map(node => node.outerHTML).join('\n');
+
     win.document.open();
-    win.document.write(`<!doctype html><html lang="az"><head><meta charset="utf-8"><title>Restoran — Tam məlumat ixracı</title><style>
-      body{font-family:Arial,sans-serif;color:#222;margin:24px;font-size:11px}h1{font-size:22px}h2{font-size:15px;border-bottom:1px solid #999;padding-bottom:5px;margin-top:24px}p{color:#555}.meta{margin-bottom:20px}pre{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;font:10px/1.45 Consolas,monospace;background:#f5f5f5;padding:10px;border:1px solid #ddd;border-radius:4px}section{break-inside:auto}button{padding:10px 14px;font-size:14px;margin:10px 0 18px;cursor:pointer}@media print{button{display:none}body{margin:12mm}h2{break-after:avoid}pre{background:#fff}}
-      </style></head><body><h1>Restoran sistemi — bütün məlumatların ixracı</h1><p class="meta">Yaradılma tarixi: ${escapeHtml(new Date().toLocaleString('az-AZ'))}</p><button onclick="window.print()">🖨️ Çap et / PDF kimi saxla</button><p>PDF saxlamaq üçün çap pəncərəsində printer olaraq “Save as PDF / PDF kimi saxla” seçin.</p>${content}</body></html>`);
+    win.document.write(`<!doctype html><html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Restoran — ${esc(title)} — PDF</title>${headStyles}<style>
+      html,body{background:#fff!important;color:#222!important;margin:0!important;padding:0!important;font-family:Arial,sans-serif!important}
+      body{padding:16px!important}.pdf-print-heading{font-size:22px;margin:0 0 5px;color:#222!important;border-bottom:2px solid #ddd;padding-bottom:10px}
+      .pdf-print-date{font-size:11px;color:#666;margin:0 0 16px}#ad-container,.container,.pdf-print-panel{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;background:#fff!important;color:#222!important}
+      .pdf-print-panel{display:block!important;visibility:visible!important;position:static!important}.pdf-hide,.tabs,.toast-wrap,.modal-overlay,.confirm-overlay{display:none!important}
+      table{width:100%!important;border-collapse:collapse!important}th,td{border:1px solid #bbb!important;color:#222!important;background:#fff!important;padding:6px!important;font-size:10px!important}
+      .qrafik-card,.chart-wrap{break-inside:avoid;max-width:100%!important}img{max-width:100%!important}@page{size:A4 portrait;margin:12mm}
+      @media print{body{padding:0!important}.pdf-print-panel{display:block!important}.pdf-hide,.tabs,button{display:none!important}thead{display:table-header-group}tr{break-inside:avoid}}
+    </style></head><body><h1 class="pdf-print-heading">Restoran sistemi — ${esc(title)}</h1><p class="pdf-print-date">İxrac tarixi: ${esc(new Date().toLocaleString('az-AZ'))}</p><main id="pdf-main"></main></body></html>`);
     win.document.close();
-    setTimeout(() => { try { win.focus(); win.print(); } catch (e) { /* İstifadəçi düymə ilə çap edə bilər. */ } }, 500);
+    const mount = win.document.getElementById('pdf-main');
+    if (mount) mount.appendChild(win.document.importNode(clone, true));
+    win.onload = () => setTimeout(() => { try { win.focus(); win.print(); } catch (e) {} }, 350);
 }
 
 function ad_render() {
     const c = document.getElementById('ad-container');
     c.innerHTML = '';
     c.appendChild(h('div', {style: 'display:flex;justify-content:flex-end;margin:12px 0;'},
-        h('button', {className: 's-btn b-tamam', style: 'width:auto;padding:12px 18px;', onclick: ad_butunDataniPdf}, '📄 Bütün məlumatları PDF-ə çıxar')));
+        h('button', {className: 's-btn b-tamam', style: 'width:auto;padding:12px 18px;', onclick: ad_butunDataniPdf}, '📄 Açıq səhifəni PDF-ə çıxar')));
     const tabs = h('div', {className: 'tabs'});
     AD_TABS.forEach(([k, l], i) => tabs.appendChild(
         h('button', {className: 'tab' + (i === 0 ? ' active' : ''), 'data-tab': k, onclick: e => ad_tabSec(k, e.target)}, l)));
@@ -1628,6 +1686,12 @@ function ad_render() {
     ad_renderIsciler(); ad_renderAktivlik(); ad_renderSelfOrders();
     ad_renderAlislar(); ad_renderEndirimler(); ad_renderHesabat();
     ad_renderQrafikler(); ad_renderAyarlar(); ad_renderSifirla();
+    AD_TABS.forEach(([k]) => {
+        const panel = document.getElementById('ad-p-' + k);
+        if (!panel || panel.querySelector('.pdf-export-btn')) return;
+        const pdfBtn = h('button', {className: 's-btn b-tamam pdf-export-btn', style: 'width:auto;padding:10px 16px;margin:0 0 16px auto;display:block;', onclick: () => ad_sehifePdf(k)}, '📄 Bu səhifəni PDF kimi saxla');
+        panel.insertBefore(pdfBtn, panel.firstChild);
+    });
 }
 
 function ad_tabSec(tab, btn) {
