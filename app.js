@@ -1332,17 +1332,20 @@ function qrMasaSecimi() {
     const kabinetler = DATA.masalar.filter(m => m.nov === 'kabinet').sort((a, b) => a.id - b.id);
     
     const masaKart = (m) => {
-        const doludur = masaDoludur(m.id);
+        const ozMasa = DATA.selfOrders.some(so => so.masa_id === m.id && so.client_id === QR.clientId && ['gozlemede', 'qebul', 'hazirlanir', 'hazir'].includes(so.status));
+        const basqasininMasasi = !ozMasa && masaDoludur(m.id);
         return h('div', {
-            className: 'masa' + (doludur ? ' bagli' : ''),
-            style: doludur ? 'opacity:0.45;cursor:not-allowed;filter:grayscale(0.6);' : 'cursor:pointer;',
+            className: 'masa' + ((basqasininMasasi || ozMasa) ? ' bagli' : ''),
+            style: ozMasa ? 'cursor:pointer;border:2px solid #2ecc71;opacity:1;filter:none;background:rgba(46,204,113,0.16);' : (basqasininMasasi ? 'opacity:0.45;cursor:not-allowed;filter:grayscale(0.6);' : 'cursor:pointer;'),
             onclick: () => {
-                if (doludur) { toast('❌ Bu masa dolu!', 'error'); return; }
+                if (basqasininMasasi) { toast('❌ Bu masa başqa müştəri üçün doludur!', 'error'); return; }
                 QR.tip = 'masa'; QR.masaId = m.id; QR.masaAd = m.ad; QR.sebet = [];
                 qrKontekstYaddaSaxla();
                 qrMenyuEkrani();
             }
-        }, h('div', {className: 'ad'}, m.ad), doludur ? h('div', {className: 'st', style: 'color:#ff9800;font-size:11px;'}, '🔴 Dolu') : null);
+        }, h('div', {className: 'ad'}, m.ad),
+        ozMasa ? h('div', {className: 'st', style: 'color:#2ecc71;font-size:11px;font-weight:bold;'}, '🟢 Sizin masanız') :
+        (basqasininMasasi ? h('div', {className: 'st', style: 'color:#ff9800;font-size:11px;'}, '🔴 Dolu') : null));
     };
     
     const box = h('div', {style: 'min-height:100vh; padding:20px;'},
@@ -1398,7 +1401,8 @@ function qrMenyuEkrani() {
         h('div', {id: 'qr-sebetItems'}),
         h('div', {className: 'toplam'}, h('span', {}, 'Toplam:'), h('span', {id: 'qr-toplam'}, '0.00 ₼'))
     );
-    const katsEl = h('div', {className: 'kats'});
+    // QR menyuda yemək və içki kateqoriyaları paket menyusu kimi alt-alta göstərilir.
+    const katsEl = h('div', {className: 'kats', style: 'display:flex;flex-direction:column;align-items:stretch;gap:10px;width:100%;'});
     const mehsEl = h('div', {className: 'mehsullar'});
     c.appendChild(h('div', {id: 'qr-orders', style: 'margin-bottom:18px;'}));
     c.appendChild(h('div', {className: 'menyu-wrap'}, h('div', {}, katsEl, mehsEl), sebetPanelFn()));
@@ -1427,16 +1431,16 @@ function qrMenyuEkrani() {
     };
     const qrupCiz = (host, siyahi, renk) => siyahi.forEach(k => {
         if (!MENYU[k]) return;
-        const b = h('button', {className: 'kat', style: `border:2px solid ${renk};`, onclick: () => sec(k, b)}, k);
+        const b = h('button', {className: 'kat', style: `border:2px solid ${renk};width:100%;text-align:left;`, onclick: () => sec(k, b)}, k);
         if (!ilkKat) ilkKat = b;
         host.appendChild(b);
     });
     katsEl.appendChild(h('div', {style: 'font-weight:bold;color:#f39c12;margin:4px 0;width:100%;'}, '🍽️ Yeməklər'));
-    const yemeklerRow = h('div', {className: 'kats'});
+    const yemeklerRow = h('div', {className: 'kats', style: 'display:flex;flex-direction:column;align-items:stretch;gap:8px;width:100%;'});
     katsEl.appendChild(yemeklerRow);
     qrupCiz(yemeklerRow, YEMEKLER, '#f39c12');
     katsEl.appendChild(h('div', {style: 'font-weight:bold;color:#3498db;margin:12px 0 4px;width:100%;'}, '🥤 İçkilər'));
-    const ickilerRow = h('div', {className: 'kats'});
+    const ickilerRow = h('div', {className: 'kats', style: 'display:flex;flex-direction:column;align-items:stretch;gap:8px;width:100%;'});
     katsEl.appendChild(ickilerRow);
     qrupCiz(ickilerRow, ICKILER, '#3498db');
     if (YEMEKLER.length > 0) sec(YEMEKLER[0], ilkKat);
@@ -1448,13 +1452,20 @@ function qrMenyuEkrani() {
 function qrSifarisTarixiniYenile() {
     const el = document.getElementById('qr-orders');
     if (!el) return;
+    const əvvəlkiDetails = el.querySelector('details');
+    const əvvəlAciq = əvvəlkiDetails ? əvvəlkiDetails.open : false;
     el.innerHTML = '';
+    // localStorage-da olan client ID sabit qaldığına görə tarixçə növbəti gün də eyni cihazda görünür.
     const orders = DATA.selfOrders
         .filter(x => x.client_id === QR.clientId)
         .sort((a, b) => new Date(b.tarix || 0) - new Date(a.tarix || 0));
-    el.appendChild(h('h3', {style: 'margin:12px 0;color:#fff;'}, '📋 Mənim sifarişlərim'));
+    const details = h('details', {style: 'margin:10px 0 16px;border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,0.035);'});
+    details.open = əvvəlAciq;
+    const summaryEl = h('summary', {style: 'cursor:pointer;list-style:revert;font-weight:bold;color:#fff;padding:4px 0;'}, `📋 Mənim sifarişlərim (${orders.length}) — aç / bağla`);
+    details.appendChild(summaryEl);
     if (!orders.length) {
-        el.appendChild(h('p', {style: 'color:#aaa;padding:8px 0;'}, 'Bu cihazdan hələ sifariş verilməyib.'));
+        details.appendChild(h('p', {style: 'color:#aaa;padding:10px 0 2px;'}, 'Bu cihazdan hələ sifariş verilməyib.'));
+        el.appendChild(details);
         return;
     }
     const statuslar = {
@@ -1466,18 +1477,19 @@ function qrSifarisTarixiniYenile() {
         const [statusAd, reng] = statuslar[o.status] || [o.status || 'Status bilinmir', '#aaa'];
         const mehsullar = Array.isArray(o.mehsullar) ? o.mehsullar : [];
         const summary = mehsullar.map(x => `${x.ad} ×${x.miqdar}`).join(', ');
-        el.appendChild(h('div', {className: 'aktiv-masa-kart', style: `border:1px solid ${reng};margin:8px 0;padding:12px;`},
-            h('div', {style: 'display:flex;justify-content:space-between;gap:10px;align-items:start;'},
+        details.appendChild(h('div', {className: 'aktiv-masa-kart', style: `border:1px solid ${reng};margin:8px 0;padding:12px;`},
+            h('div', {style: 'display:flex;justify-content:space-between;gap:10px;align-items:start;flex-wrap:wrap;'},
                 h('div', {},
                     h('strong', {}, o.tip === 'masa' ? `🍽️ ${o.masa_ad || QR.masaAd}` : `🚶 ${o.musteri_ad || QR.musteri_ad || 'Paket sifarişi'}`),
                     h('div', {style: 'color:#aaa;font-size:12px;margin-top:4px;'}, new Date(o.tarix).toLocaleString('az-AZ'))
                 ),
-                h('span', {style: `color:${reng};font-weight:bold;white-space:nowrap;`}, statusAd)
+                h('span', {style: `color:${reng};font-weight:bold;`}, statusAd)
             ),
             h('div', {style: 'margin-top:8px;font-size:13px;'}, summary || 'Məhsul məlumatı yoxdur'),
             h('div', {style: 'margin-top:8px;color:#e94560;font-weight:bold;text-align:right;'}, pul(o.toplam || 0))
         ));
     });
+    el.appendChild(details);
 }
 
 function qrSebetYenile() {
@@ -1579,9 +1591,35 @@ function yenileBtn(func) {
     return h('button', {style: 'background:#3498db; margin-bottom:15px; padding:10px 20px; border:none; border-radius:8px; color:#fff; cursor:pointer; font-weight:600;', onclick: () => { func(); toast('✅ Yeniləndi', 'info', 1500); }}, '🔄 Yenilə');
 }
 
+function ad_butunDataniPdf() {
+    // Bütün yüklənmiş Firebase məlumatları, menyu, stok və sayğaclar çap edilə bilən hesabatda toplanır.
+    const bolmeler = [
+        ['İşçilər', DATA.isciler], ['Masalar və kabinetlər', DATA.masalar],
+        ['Sessiyalar', DATA.sessiyalar], ['Adi sifarişlər', DATA.sifarisler],
+        ['QR sifarişləri', DATA.selfOrders], ['Alışlar', DATA.alislar],
+        ['Endirimlər', DATA.endirimler], ['Menyu', MENYU],
+        ['Stok vəziyyəti', MENYU_STOK], ['Sayğaclar', DATA.sayac]
+    ];
+    const escapeHtml = value => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    const content = bolmeler.map(([ad, data]) => {
+        const json = JSON.stringify(data ?? [], null, 2);
+        return `<section><h2>${escapeHtml(ad)} (${Array.isArray(data) ? data.length : Object.keys(data || {}).length})</h2><pre>${escapeHtml(json)}</pre></section>`;
+    }).join('');
+    const win = window.open('', '_blank');
+    if (!win) { toast('❌ PDF pəncərəsi bloklandı. Brauzerdə pop-up icazəsi verin.', 'error', 6000); return; }
+    win.document.open();
+    win.document.write(`<!doctype html><html lang="az"><head><meta charset="utf-8"><title>Restoran — Tam məlumat ixracı</title><style>
+      body{font-family:Arial,sans-serif;color:#222;margin:24px;font-size:11px}h1{font-size:22px}h2{font-size:15px;border-bottom:1px solid #999;padding-bottom:5px;margin-top:24px}p{color:#555}.meta{margin-bottom:20px}pre{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;font:10px/1.45 Consolas,monospace;background:#f5f5f5;padding:10px;border:1px solid #ddd;border-radius:4px}section{break-inside:auto}button{padding:10px 14px;font-size:14px;margin:10px 0 18px;cursor:pointer}@media print{button{display:none}body{margin:12mm}h2{break-after:avoid}pre{background:#fff}}
+      </style></head><body><h1>Restoran sistemi — bütün məlumatların ixracı</h1><p class="meta">Yaradılma tarixi: ${escapeHtml(new Date().toLocaleString('az-AZ'))}</p><button onclick="window.print()">🖨️ Çap et / PDF kimi saxla</button><p>PDF saxlamaq üçün çap pəncərəsində printer olaraq “Save as PDF / PDF kimi saxla” seçin.</p>${content}</body></html>`);
+    win.document.close();
+    setTimeout(() => { try { win.focus(); win.print(); } catch (e) { /* İstifadəçi düymə ilə çap edə bilər. */ } }, 500);
+}
+
 function ad_render() {
     const c = document.getElementById('ad-container');
     c.innerHTML = '';
+    c.appendChild(h('div', {style: 'display:flex;justify-content:flex-end;margin:12px 0;'},
+        h('button', {className: 's-btn b-tamam', style: 'width:auto;padding:12px 18px;', onclick: ad_butunDataniPdf}, '📄 Bütün məlumatları PDF-ə çıxar')));
     const tabs = h('div', {className: 'tabs'});
     AD_TABS.forEach(([k, l], i) => tabs.appendChild(
         h('button', {className: 'tab' + (i === 0 ? ' active' : ''), 'data-tab': k, onclick: e => ad_tabSec(k, e.target)}, l)));
