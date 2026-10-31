@@ -220,12 +220,7 @@ function ekranYenile() {
         if (!OF.masaId) of_masaSecimCiz();
     } else if (user.rol === 'kassir' && document.getElementById('ka-container')) {
         const aktivTab = document.querySelector('#ka-container .tabs .tab.active');
-        if (aktivTab) {
-            const kaTab = aktivTab.getAttribute('data-tab');
-            if (kaTab === 'paketler') paketCedveli('ka-p-paketler');
-            else if (kaTab === 'masalar') ka_renderMasalar();       // QR sifariş gələndə masa dərhal məşğul görünsün
-            else if (kaTab === 'selforders') ka_renderSelfOrders();
-        }
+        if (aktivTab && aktivTab.textContent.includes('Paket')) paketCedveli('ka-p-paketler');
     } else if (user.rol === 'paketci' && document.getElementById('pk-container')) {
         if (!PK.sessiya) pk_render();
     }
@@ -524,38 +519,6 @@ function sessiyaCeki(sId, basliq) {
 // ==================== SESSİYA ====================
 function aktivSessiya(masaId) {
     return DATA.sessiyalar.find(x => x.masa_id === masaId && x.status === 'aktiv' && x.tip === 'masa') || null;
-}
-
-// ---------- QR masa köməkçiləri ----------
-const QR_AKTIV_STATUS = ['gozlemede', 'qebul', 'hazirlanir', 'hazir'];
-const QR_STATUS_AD = {gozlemede: '⏳ Gözləyir', qebul: '✅ Qəbul', hazirlanir: '🍳 Hazırlanır', hazir: '🎉 Hazır', catdirildi: '📦 Çatdırıldı', legv: '❌ Ləğv'};
-const QR_STATUS_RENG = {gozlemede: '#f39c12', qebul: '#3498db', hazirlanir: '#9b59b6', hazir: '#2ecc71', catdirildi: '#27ae60', legv: '#e74c3c'};
-
-// Masadakı bütün aktiv QR sifarişləri (köhnədən yeniyə)
-function qrMasaSifarisleri(masaId) {
-    return DATA.selfOrders
-        .filter(so => so.tip === 'masa' && so.masa_id === masaId && QR_AKTIV_STATUS.includes(so.status))
-        .sort((a, b) => new Date(a.tarix) - new Date(b.tarix));
-}
-// Masanın QR üzrə məşğul olma başlanğıcı = ən köhnə aktiv sifarişin vaxtı
-function qrBaslamaTarixi(siyahi) { return siyahi.length ? siyahi[0].tarix : null; }
-function saatDeqiqe(iso) { return iso ? new Date(iso).toLocaleTimeString('az-AZ', {hour: '2-digit', minute: '2-digit'}) : '—'; }
-// Admin aktivlik üçün: masa üzrə qruplaşmış aktiv QR sifarişləri
-function qrAktivMasaGruplari() {
-    const map = {};
-    DATA.selfOrders.filter(so => so.tip === 'masa' && QR_AKTIV_STATUS.includes(so.status)).forEach(so => {
-        (map[so.masa_id] = map[so.masa_id] || []).push(so);
-    });
-    return Object.values(map).map(siyahi => {
-        siyahi.sort((a, b) => new Date(a.tarix) - new Date(b.tarix));
-        return {masa_id: siyahi[0].masa_id, masa_ad: siyahi[0].masa_ad, siparisler: siyahi, baslama: siyahi[0].tarix};
-    }).sort((a, b) => new Date(b.baslama) - new Date(a.baslama));
-}
-// Ofisiant / Kassir masa kartına QR məlumatı + saat əlavə edir
-function qrMasaKartElave(div, qrSiyahi) {
-    const b = qrBaslamaTarixi(qrSiyahi);
-    div.appendChild(h('div', {className: 'isci-ad'}, '📱 QR Self-Order · 🕒 ' + saatDeqiqe(b)));
-    div.appendChild(h('div', {className: 'masa-timer'}, h('span', {}, '⏱️'), h('span', {className: 'timer-saat', 'data-baslama': b}, '00:00:00')));
 }
 
 async function sessiyaYarat(masaId, masaAd, tip, elave = {}) {
@@ -879,8 +842,7 @@ function of_masaSecimCiz() {
 
     masaKartlari(c, 'of', m => {
         const s = sessiyalar.find(x => x.masa_id === m.id && x.status === 'aktiv' && x.tip === 'masa');
-        const qrSiyahi = qrMasaSifarisleri(m.id);
-        const selfOrder = qrSiyahi[0] || null;
+        const selfOrder = DATA.selfOrders.find(so => so.masa_id === m.id && ['gozlemede', 'qebul', 'hazirlanir', 'hazir'].includes(so.status));
         const basqa = s && s.isci_id !== user.id;
         const ozum = s && s.isci_id === user.id;
 
@@ -899,7 +861,7 @@ function of_masaSecimCiz() {
             div.appendChild(h('div', {className: 'isci-ad'}, '👤 ' + s.isci_ad));
             div.appendChild(h('div', {className: 'masa-timer'}, h('span', {}, '⏱️'), h('span', {className: 'timer-saat', 'data-baslama': s.baslama}, '00:00:00')));
         } else if (selfOrder) {
-            qrMasaKartElave(div, qrSiyahi);
+            div.appendChild(h('div', {className: 'isci-ad'}, '📱 QR Self-Order'));
         }
         div.addEventListener('click', () => {
             if (selfOrder && !s) { toast('❌ Bu masa QR sifarişi ilə dolu!', 'error'); return; }
@@ -1109,8 +1071,7 @@ function ka_renderMasalar() {
 
     masaKartlari(c, 'ka', m => {
         const s = DATA.sessiyalar.find(x => x.masa_id === m.id && x.status === 'aktiv' && x.tip === 'masa');
-        const qrSiyahi = qrMasaSifarisleri(m.id);
-        const selfOrder = qrSiyahi[0] || null;
+        const selfOrder = DATA.selfOrders.find(so => so.masa_id === m.id && ['gozlemede', 'qebul', 'hazirlanir', 'hazir'].includes(so.status));
         
         let klass = 'masa', st = '🟢 Boş';
         if (s) {
@@ -1138,7 +1099,7 @@ function ka_renderMasalar() {
             }, '💰 Bağla');
             div.appendChild(baglaBtn);
         } else if (selfOrder) {
-            qrMasaKartElave(div, qrSiyahi);
+            div.appendChild(h('div', {className: 'isci-ad'}, '📱 QR Self-Order'));
             const baglaBtn = h('button', {
                 className: 'small-btn',
                 style: 'background:#e74c3c; margin-top:8px; width:100%; padding:8px; font-size:12px;',
@@ -1603,30 +1564,6 @@ const AD_TABS = [
     ['sifirla', '🗑️ Sıfırla']
 ];
 
-// Admin panelində "PDF" yazılı təkrarlanan düymələrdən yalnız birincisini saxla
-function pdfDuplikatTemizle() {
-    const kandidatlar = Array.from(document.querySelectorAll('button, a, [role="button"]'))
-        .filter(el => /pdf/i.test(el.textContent || '') && !el.closest('#cekModal'));
-    // Yalnız "yarpaq" elementlər (içində başqa PDF düyməsi olmayanlar)
-    const yarpaq = kandidatlar.filter(el => !kandidatlar.some(o => o !== el && el.contains(o)));
-    const gorunen = yarpaq.filter(el => el.style.display !== 'none');
-    gorunen.slice(1).forEach(el => { el.style.display = 'none'; });
-}
-let _pdfObserver = null;
-function pdfDuplikatNezaret() {
-    if (_pdfObserver) _pdfObserver.disconnect();
-    let tm = null;
-    _pdfObserver = new MutationObserver(() => {
-        clearTimeout(tm);
-        tm = setTimeout(() => {
-            if (!document.getElementById('ad-container')) { _pdfObserver.disconnect(); return; }
-            pdfDuplikatTemizle();
-        }, 50);
-    });
-    _pdfObserver.observe(document.body, {childList: true, subtree: true});
-    pdfDuplikatTemizle();
-}
-
 function adminPanel() {
     const i = istifadeciAl();
     app.appendChild(makeHeader('👨‍💼 Admin Paneli', i.ad, 'admin'));
@@ -1636,7 +1573,6 @@ function adminPanel() {
         Chart.defaults.borderColor = 'rgba(255,255,255,0.1)';
     }
     ad_render();
-    pdfDuplikatNezaret();
 }
 
 function yenileBtn(func) {
@@ -1760,12 +1696,11 @@ function ad_renderAktivlik() {
 
 function ad_aktivlikYukle() {
     const sessMasalar = DATA.sessiyalar.filter(s => s.status === 'aktiv' && s.tip === 'masa');
-    const qrGruplar = qrAktivMasaGruplari();
     const elM = document.getElementById('ad-aktivMasalarList');
     if (elM) {
         elM.innerHTML = '';
-        if (!sessMasalar.length && !qrGruplar.length) elM.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:20px;'}, '✅ Yoxdur'));
-        sessMasalar.sort((a, b) => b.id - a.id).forEach(s => {
+        if (!sessMasalar.length) elM.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:20px;'}, '✅ Yoxdur'));
+        else sessMasalar.sort((a, b) => b.id - a.id).forEach(s => {
             const sif = DATA.sifarisler.filter(x => x.sessiya_id === s.id);
             const odenilib = s.odenis_novu != null;
             const odenisAd = odenilib ? (s.odenis_novu === 'kart' ? '💳 Kart' : '💵 Nağd') : '⏳ Ödənilməyib';
@@ -1778,32 +1713,6 @@ function ad_aktivlikYukle() {
                     h('div', {className: 'aktiv-masa-mebleg'}, pul(s.yekun))),
                 sif.length ? tbl : h('p', {style: 'color:#aaa;padding:10px;'}, 'Yoxdur'),
                 h('div', {className: 'aktiv-masa-btnler'}, h('button', {className: 'small-btn', style: 'background:#e74c3c;', onclick: () => ad_masaBagla(s.id)}, '💰 Masa Bağla'))
-            ));
-        });
-        // QR ilə sifariş verilmiş masalar
-        qrGruplar.forEach(g => {
-            const setirler = [];
-            g.siparisler.forEach(so => so.mehsullar.forEach(x => setirler.push(h('tr', {},
-                h('td', {}, x.ad), h('td', {}, x.miqdar), h('td', {}, pul(x.q)),
-                h('td', {style: 'color:#e94560;font-weight:bold;'}, pul(x.q * x.miqdar)),
-                h('td', {style: 'color:#aaa;font-size:12px;'}, saatDeqiqe(so.tarix))))));
-            const tbl = h('table', {style: 'margin-top:15px;'},
-                h('thead', {}, h('tr', {}, ...['Məhsul', 'Miqdar', 'Qiymət', 'Məbləğ', 'Saat'].map(x => h('th', {}, x)))),
-                h('tbody', {}, ...setirler));
-            const statuslar = [...new Set(g.siparisler.map(so => so.status))].map(st =>
-                h('span', {style: `display:inline-block;margin:6px 6px 0 0;padding:3px 10px;border-radius:20px;background:${QR_STATUS_RENG[st]}25;border:1px solid ${QR_STATUS_RENG[st]};color:${QR_STATUS_RENG[st]};font-size:12px;font-weight:bold;`}, QR_STATUS_AD[st] || st));
-            const hazirBtnler = g.siparisler.filter(so => so.status === 'hazirlanir').map(so =>
-                h('button', {className: 'small-btn', style: 'background:#2ecc71;', onclick: () => ad_selfOrderStatus(so.id, 'hazir')}, '🎉 Hazır'));
-            elM.appendChild(h('div', {className: 'aktiv-masa-kart', style: 'border-color:#3498db;'},
-                h('div', {className: 'aktiv-masa-header'},
-                    h('div', {},
-                        h('div', {className: 'aktiv-masa-ad', style: 'color:#3498db;'}, '📱 ' + g.masa_ad),
-                        h('div', {className: 'aktiv-masa-info'}, `QR Self-Order · ${g.siparisler.length} sifariş · 🕒 ${saatDeqiqe(g.baslama)}`),
-                        h('div', {}, ...statuslar),
-                        h('div', {className: 'aktiv-masa-timer'}, h('span', {}, '⏱️'), h('span', {className: 'aktiv-timer', 'data-baslama': g.baslama}, '00:00:00'))),
-                    h('div', {className: 'aktiv-masa-mebleg'}, pul(cem(g.siparisler, so => so.toplam)))),
-                tbl,
-                hazirBtnler.length ? h('div', {className: 'aktiv-masa-btnler'}, ...hazirBtnler) : null
             ));
         });
     }
@@ -1900,6 +1809,7 @@ function ad_selfOrdersYukle() {
         );
         const btnler = h('div', {className: 'aktiv-masa-btnler', style: 'margin-top:15px;'},
             so.status === 'hazirlanir' ? h('button', {className: 'small-btn', style: 'background:#2ecc71;', onclick: () => ad_selfOrderStatus(so.id, 'hazir')}, '🎉 Hazır') : null,
+            so.status === 'hazir' ? h('button', {className: 'small-btn', style: 'background:#27ae60;', onclick: () => ad_selfOrderStatus(so.id, 'catdirildi')}, '📦 Çatdırıldı') : null,
             so.status !== 'legv' && so.status !== 'catdirildi' ? h('button', {className: 'small-btn', style: 'background:#e74c3c;', onclick: () => ad_selfOrderStatus(so.id, 'legv')}, '❌ Ləğv') : null
         );
         el.appendChild(h('div', {className: 'aktiv-masa-kart', style: `border-color:${statusReng};`},
@@ -1914,17 +1824,7 @@ function ad_selfOrdersYukle() {
 }
 
 async function ad_selfOrderStatus(id, status) {
-    try {
-        const so = DATA.selfOrders.find(x => x.id === id);
-        await FB.update(DR('selfOrders/' + id), {status});
-        // Ləğv olunanda masada başqa aktiv QR yoxdursa masanı boşalt
-        if (status === 'legv' && so && so.masa_id) {
-            const basqa = DATA.selfOrders.some(x => x.id !== id && x.masa_id === so.masa_id && QR_AKTIV_STATUS.includes(x.status));
-            const sess = aktivSessiya(so.masa_id);
-            if (!basqa && !sess) await FB.update(DR('masalar/' + so.masa_id), {status: 'bos'});
-        }
-        toast('✅', 'success');
-    }
+    try { await FB.update(DR('selfOrders/' + id), {status}); toast('✅', 'success'); }
     catch (err) { toast('❌ ' + err.message, 'error'); }
     setTimeout(ad_selfOrdersYukle, 300);
 }
