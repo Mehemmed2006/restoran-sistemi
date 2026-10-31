@@ -221,11 +221,10 @@ function ekranYenile() {
     } else if (user.rol === 'kassir' && document.getElementById('ka-container')) {
         const aktivTab = document.querySelector('#ka-container .tabs .tab.active');
         if (aktivTab) {
-            const tabName = aktivTab.getAttribute('data-tab');
-            if (tabName === 'masalar') ka_renderMasalar();
-            else if (tabName === 'selforders') ka_renderSelfOrders();
-            else if (tabName === 'paketler') paketCedveli('ka-p-paketler');
-            else if (tabName === 'alislar') ka_renderAlislar();
+            const kaTab = aktivTab.getAttribute('data-tab');
+            if (kaTab === 'paketler') paketCedveli('ka-p-paketler');
+            else if (kaTab === 'masalar') ka_renderMasalar();       // QR sifariş gələndə masa dərhal məşğul görünsün
+            else if (kaTab === 'selforders') ka_renderSelfOrders();
         }
     } else if (user.rol === 'paketci' && document.getElementById('pk-container')) {
         if (!PK.sessiya) pk_render();
@@ -525,6 +524,38 @@ function sessiyaCeki(sId, basliq) {
 // ==================== SESSİYA ====================
 function aktivSessiya(masaId) {
     return DATA.sessiyalar.find(x => x.masa_id === masaId && x.status === 'aktiv' && x.tip === 'masa') || null;
+}
+
+// ---------- QR masa köməkçiləri ----------
+const QR_AKTIV_STATUS = ['gozlemede', 'qebul', 'hazirlanir', 'hazir'];
+const QR_STATUS_AD = {gozlemede: '⏳ Gözləyir', qebul: '✅ Qəbul', hazirlanir: '🍳 Hazırlanır', hazir: '🎉 Hazır', catdirildi: '📦 Çatdırıldı', legv: '❌ Ləğv'};
+const QR_STATUS_RENG = {gozlemede: '#f39c12', qebul: '#3498db', hazirlanir: '#9b59b6', hazir: '#2ecc71', catdirildi: '#27ae60', legv: '#e74c3c'};
+
+// Masadakı bütün aktiv QR sifarişləri (köhnədən yeniyə)
+function qrMasaSifarisleri(masaId) {
+    return DATA.selfOrders
+        .filter(so => so.tip === 'masa' && so.masa_id === masaId && QR_AKTIV_STATUS.includes(so.status))
+        .sort((a, b) => new Date(a.tarix) - new Date(b.tarix));
+}
+// Masanın QR üzrə məşğul olma başlanğıcı = ən köhnə aktiv sifarişin vaxtı
+function qrBaslamaTarixi(siyahi) { return siyahi.length ? siyahi[0].tarix : null; }
+function saatDeqiqe(iso) { return iso ? new Date(iso).toLocaleTimeString('az-AZ', {hour: '2-digit', minute: '2-digit'}) : '—'; }
+// Admin aktivlik üçün: masa üzrə qruplaşmış aktiv QR sifarişləri
+function qrAktivMasaGruplari() {
+    const map = {};
+    DATA.selfOrders.filter(so => so.tip === 'masa' && QR_AKTIV_STATUS.includes(so.status)).forEach(so => {
+        (map[so.masa_id] = map[so.masa_id] || []).push(so);
+    });
+    return Object.values(map).map(siyahi => {
+        siyahi.sort((a, b) => new Date(a.tarix) - new Date(b.tarix));
+        return {masa_id: siyahi[0].masa_id, masa_ad: siyahi[0].masa_ad, siparisler: siyahi, baslama: siyahi[0].tarix};
+    }).sort((a, b) => new Date(b.baslama) - new Date(a.baslama));
+}
+// Ofisiant / Kassir masa kartına QR məlumatı + saat əlavə edir
+function qrMasaKartElave(div, qrSiyahi) {
+    const b = qrBaslamaTarixi(qrSiyahi);
+    div.appendChild(h('div', {className: 'isci-ad'}, '📱 QR Self-Order · 🕒 ' + saatDeqiqe(b)));
+    div.appendChild(h('div', {className: 'masa-timer'}, h('span', {}, '⏱️'), h('span', {className: 'timer-saat', 'data-baslama': b}, '00:00:00')));
 }
 
 async function sessiyaYarat(masaId, masaAd, tip, elave = {}) {
@@ -848,7 +879,8 @@ function of_masaSecimCiz() {
 
     masaKartlari(c, 'of', m => {
         const s = sessiyalar.find(x => x.masa_id === m.id && x.status === 'aktiv' && x.tip === 'masa');
-        const selfOrder = DATA.selfOrders.find(so => so.masa_id === m.id && ['gozlemede', 'qebul', 'hazirlanir', 'hazir'].includes(so.status));
+        const qrSiyahi = qrMasaSifarisleri(m.id);
+        const selfOrder = qrSiyahi[0] || null;
         const basqa = s && s.isci_id !== user.id;
         const ozum = s && s.isci_id === user.id;
 
@@ -867,7 +899,7 @@ function of_masaSecimCiz() {
             div.appendChild(h('div', {className: 'isci-ad'}, '👤 ' + s.isci_ad));
             div.appendChild(h('div', {className: 'masa-timer'}, h('span', {}, '⏱️'), h('span', {className: 'timer-saat', 'data-baslama': s.baslama}, '00:00:00')));
         } else if (selfOrder) {
-            div.appendChild(h('div', {className: 'isci-ad'}, '📱 QR Self-Order'));
+            qrMasaKartElave(div, qrSiyahi);
         }
         div.addEventListener('click', () => {
             if (selfOrder && !s) { toast('❌ Bu masa QR sifarişi ilə dolu!', 'error'); return; }
@@ -1077,7 +1109,8 @@ function ka_renderMasalar() {
 
     masaKartlari(c, 'ka', m => {
         const s = DATA.sessiyalar.find(x => x.masa_id === m.id && x.status === 'aktiv' && x.tip === 'masa');
-        const selfOrder = DATA.selfOrders.find(so => so.masa_id === m.id && ['gozlemede', 'qebul', 'hazirlanir', 'hazir'].includes(so.status));
+        const qrSiyahi = qrMasaSifarisleri(m.id);
+        const selfOrder = qrSiyahi[0] || null;
         
         let klass = 'masa', st = '🟢 Boş';
         if (s) {
@@ -1105,7 +1138,7 @@ function ka_renderMasalar() {
             }, '💰 Bağla');
             div.appendChild(baglaBtn);
         } else if (selfOrder) {
-            div.appendChild(h('div', {className: 'isci-ad'}, '📱 QR Self-Order'));
+            qrMasaKartElave(div, qrSiyahi);
             const baglaBtn = h('button', {
                 className: 'small-btn',
                 style: 'background:#e74c3c; margin-top:8px; width:100%; padding:8px; font-size:12px;',
@@ -1338,20 +1371,17 @@ function qrMasaSecimi() {
     const kabinetler = DATA.masalar.filter(m => m.nov === 'kabinet').sort((a, b) => a.id - b.id);
     
     const masaKart = (m) => {
-        const ozMasa = DATA.selfOrders.some(so => so.masa_id === m.id && so.client_id === QR.clientId && ['gozlemede', 'qebul', 'hazirlanir', 'hazir'].includes(so.status));
-        const basqasininMasasi = !ozMasa && masaDoludur(m.id);
+        const doludur = masaDoludur(m.id);
         return h('div', {
-            className: 'masa' + ((basqasininMasasi || ozMasa) ? ' bagli' : ''),
-            style: ozMasa ? 'cursor:pointer;border:2px solid #2ecc71;opacity:1;filter:none;background:rgba(46,204,113,0.16);' : (basqasininMasasi ? 'opacity:0.45;cursor:not-allowed;filter:grayscale(0.6);' : 'cursor:pointer;'),
+            className: 'masa' + (doludur ? ' bagli' : ''),
+            style: doludur ? 'opacity:0.45;cursor:not-allowed;filter:grayscale(0.6);' : 'cursor:pointer;',
             onclick: () => {
-                if (basqasininMasasi) { toast('❌ Bu masa başqa müştəri üçün doludur!', 'error'); return; }
+                if (doludur) { toast('❌ Bu masa dolu!', 'error'); return; }
                 QR.tip = 'masa'; QR.masaId = m.id; QR.masaAd = m.ad; QR.sebet = [];
                 qrKontekstYaddaSaxla();
                 qrMenyuEkrani();
             }
-        }, h('div', {className: 'ad'}, m.ad),
-        ozMasa ? h('div', {className: 'st', style: 'color:#2ecc71;font-size:11px;font-weight:bold;'}, '🟢 Sizin masanız') :
-        (basqasininMasasi ? h('div', {className: 'st', style: 'color:#ff9800;font-size:11px;'}, '🔴 Dolu') : null));
+        }, h('div', {className: 'ad'}, m.ad), doludur ? h('div', {className: 'st', style: 'color:#ff9800;font-size:11px;'}, '🔴 Dolu') : null);
     };
     
     const box = h('div', {style: 'min-height:100vh; padding:20px;'},
@@ -1407,8 +1437,7 @@ function qrMenyuEkrani() {
         h('div', {id: 'qr-sebetItems'}),
         h('div', {className: 'toplam'}, h('span', {}, 'Toplam:'), h('span', {id: 'qr-toplam'}, '0.00 ₼'))
     );
-    // QR menyuda yemək və içki kateqoriyaları paket menyusu kimi alt-alta göstərilir.
-    const katsEl = h('div', {className: 'kats', style: 'display:flex;flex-direction:column;align-items:stretch;gap:10px;width:100%;'});
+    const katsEl = h('div', {className: 'kats'});
     const mehsEl = h('div', {className: 'mehsullar'});
     c.appendChild(h('div', {id: 'qr-orders', style: 'margin-bottom:18px;'}));
     c.appendChild(h('div', {className: 'menyu-wrap'}, h('div', {}, katsEl, mehsEl), sebetPanelFn()));
@@ -1437,16 +1466,16 @@ function qrMenyuEkrani() {
     };
     const qrupCiz = (host, siyahi, renk) => siyahi.forEach(k => {
         if (!MENYU[k]) return;
-        const b = h('button', {className: 'kat', style: `border:2px solid ${renk};width:100%;text-align:left;`, onclick: () => sec(k, b)}, k);
+        const b = h('button', {className: 'kat', style: `border:2px solid ${renk};`, onclick: () => sec(k, b)}, k);
         if (!ilkKat) ilkKat = b;
         host.appendChild(b);
     });
     katsEl.appendChild(h('div', {style: 'font-weight:bold;color:#f39c12;margin:4px 0;width:100%;'}, '🍽️ Yeməklər'));
-    const yemeklerRow = h('div', {className: 'kats qr-kat-scroll', style: 'display:flex;flex-direction:column;align-items:stretch;gap:8px;width:100%;max-height:190px;overflow-y:auto;overflow-x:hidden;padding:4px 5px 4px 0;overscroll-behavior:contain;'});
+    const yemeklerRow = h('div', {className: 'kats'});
     katsEl.appendChild(yemeklerRow);
     qrupCiz(yemeklerRow, YEMEKLER, '#f39c12');
     katsEl.appendChild(h('div', {style: 'font-weight:bold;color:#3498db;margin:12px 0 4px;width:100%;'}, '🥤 İçkilər'));
-    const ickilerRow = h('div', {className: 'kats qr-kat-scroll', style: 'display:flex;flex-direction:column;align-items:stretch;gap:8px;width:100%;max-height:190px;overflow-y:auto;overflow-x:hidden;padding:4px 5px 4px 0;overscroll-behavior:contain;'});
+    const ickilerRow = h('div', {className: 'kats'});
     katsEl.appendChild(ickilerRow);
     qrupCiz(ickilerRow, ICKILER, '#3498db');
     if (YEMEKLER.length > 0) sec(YEMEKLER[0], ilkKat);
@@ -1458,20 +1487,13 @@ function qrMenyuEkrani() {
 function qrSifarisTarixiniYenile() {
     const el = document.getElementById('qr-orders');
     if (!el) return;
-    const əvvəlkiDetails = el.querySelector('details');
-    const əvvəlAciq = əvvəlkiDetails ? əvvəlkiDetails.open : false;
     el.innerHTML = '';
-    // localStorage-da olan client ID sabit qaldığına görə tarixçə növbəti gün də eyni cihazda görünür.
     const orders = DATA.selfOrders
         .filter(x => x.client_id === QR.clientId)
         .sort((a, b) => new Date(b.tarix || 0) - new Date(a.tarix || 0));
-    const details = h('details', {style: 'margin:10px 0 16px;border:1px solid rgba(255,255,255,0.15);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,0.035);'});
-    details.open = əvvəlAciq;
-    const summaryEl = h('summary', {style: 'cursor:pointer;list-style:revert;font-weight:bold;color:#fff;padding:4px 0;'}, `📋 Mənim sifarişlərim (${orders.length}) — aç / bağla`);
-    details.appendChild(summaryEl);
+    el.appendChild(h('h3', {style: 'margin:12px 0;color:#fff;'}, '📋 Mənim sifarişlərim'));
     if (!orders.length) {
-        details.appendChild(h('p', {style: 'color:#aaa;padding:10px 0 2px;'}, 'Bu cihazdan hələ sifariş verilməyib.'));
-        el.appendChild(details);
+        el.appendChild(h('p', {style: 'color:#aaa;padding:8px 0;'}, 'Bu cihazdan hələ sifariş verilməyib.'));
         return;
     }
     const statuslar = {
@@ -1483,19 +1505,18 @@ function qrSifarisTarixiniYenile() {
         const [statusAd, reng] = statuslar[o.status] || [o.status || 'Status bilinmir', '#aaa'];
         const mehsullar = Array.isArray(o.mehsullar) ? o.mehsullar : [];
         const summary = mehsullar.map(x => `${x.ad} ×${x.miqdar}`).join(', ');
-        details.appendChild(h('div', {className: 'aktiv-masa-kart', style: `border:1px solid ${reng};margin:8px 0;padding:12px;`},
-            h('div', {style: 'display:flex;justify-content:space-between;gap:10px;align-items:start;flex-wrap:wrap;'},
+        el.appendChild(h('div', {className: 'aktiv-masa-kart', style: `border:1px solid ${reng};margin:8px 0;padding:12px;`},
+            h('div', {style: 'display:flex;justify-content:space-between;gap:10px;align-items:start;'},
                 h('div', {},
                     h('strong', {}, o.tip === 'masa' ? `🍽️ ${o.masa_ad || QR.masaAd}` : `🚶 ${o.musteri_ad || QR.musteri_ad || 'Paket sifarişi'}`),
                     h('div', {style: 'color:#aaa;font-size:12px;margin-top:4px;'}, new Date(o.tarix).toLocaleString('az-AZ'))
                 ),
-                h('span', {style: `color:${reng};font-weight:bold;`}, statusAd)
+                h('span', {style: `color:${reng};font-weight:bold;white-space:nowrap;`}, statusAd)
             ),
             h('div', {style: 'margin-top:8px;font-size:13px;'}, summary || 'Məhsul məlumatı yoxdur'),
             h('div', {style: 'margin-top:8px;color:#e94560;font-weight:bold;text-align:right;'}, pul(o.toplam || 0))
         ));
     });
-    el.appendChild(details);
 }
 
 function qrSebetYenile() {
@@ -1555,36 +1576,15 @@ async function qrSifarisTamamla() {
         DATA.selfOrders = DATA.selfOrders.filter(x => x.id !== id).concat([siparis]);
         if (QR.tip === 'masa' && QR.masaId) await FB.update(DR('masalar/' + QR.masaId), {status: 'dolu'});
         QR.sebet = [];
-        toast('✅ Sifariş qəbul edildi — masaya göndərildi!', 'success', 5000);
-        qrSifarisTesdiqEkrani(siparis);
+        toast('✅ Sifariş qəbul edildi — Hazırlanır!', 'success', 5000);
+        qrSebetYenile();
+        qrSifarisTarixiniYenile();
     } catch (err) {
         console.error('❌ QR xəta:', err);
         toast('❌ Xəta: ' + err.message, 'error', 5000);
     } finally {
         QR.submitting = false;
     }
-}
-
-
-function qrSifarisTesdiqEkrani(siparis) {
-    app.innerHTML = '';
-    const mehsullar = Array.isArray(siparis.mehsullar) ? siparis.mehsullar : [];
-    const box = h('div', {style: 'min-height:100vh;padding:24px;display:flex;align-items:center;justify-content:center;'},
-        h('div', {style: 'width:100%;max-width:460px;text-align:center;padding:28px 22px;border-radius:22px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);'},
-            h('div', {style: 'font-size:64px;margin-bottom:12px;'}, '✅'),
-            h('h2', {style: 'color:#2ecc71;font-size:24px;margin-bottom:10px;'}, 'Sifarişiniz göndərildi!'),
-            h('p', {style: 'color:#ddd;line-height:1.6;margin-bottom:16px;'}, QR.tip === 'masa' ? `${QR.masaAd} üçün sifariş mətbəxə göndərildi. Masa işçi panelində dolu kimi görünəcək.` : 'Sifarişiniz qəbul edildi və hazırlanmağa göndərildi.'),
-            h('div', {style: 'text-align:left;background:rgba(0,0,0,.18);padding:14px;border-radius:12px;margin-bottom:16px;'},
-                h('strong', {style: 'display:block;margin-bottom:8px;'}, 'Sifariş xülasəsi'),
-                ...mehsullar.map(x => h('div', {style: 'display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.08);'}, h('span', {}, `${x.ad} ×${x.miqdar}`), h('span', {style: 'white-space:nowrap;'}, pul((x.q || 0) * (x.miqdar || 0))))),
-                h('div', {style: 'display:flex;justify-content:space-between;gap:10px;margin-top:12px;font-weight:bold;color:#2ecc71;'}, h('span', {}, 'Cəmi'), h('span', {}, pul(siparis.toplam || 0)))
-            ),
-            h('button', {className: 's-btn b-tamam', style: 'width:100%;margin-bottom:10px;', onclick: () => qrMenyuEkrani()}, '➕ Əlavə sifariş ver'),
-            h('button', {className: 's-btn b-geri', style: 'width:100%;margin-bottom:10px;', onclick: () => { qrMenyuEkrani(); setTimeout(() => { const d = document.querySelector('#qr-orders details'); if (d) d.open = true; const el = document.getElementById('qr-orders'); if (el) el.scrollIntoView({behavior:'smooth',block:'start'}); }, 50); }}, '📋 Sifarişlərim'),
-            h('p', {style: 'color:#aaa;font-size:12px;margin-top:10px;'}, 'Ödəniş kassada nağd və ya kartla edilir.')
-        )
-    );
-    app.appendChild(box);
 }
 
 function masaDoludur(masaId) {
@@ -1603,6 +1603,30 @@ const AD_TABS = [
     ['sifirla', '🗑️ Sıfırla']
 ];
 
+// Admin panelində "PDF" yazılı təkrarlanan düymələrdən yalnız birincisini saxla
+function pdfDuplikatTemizle() {
+    const kandidatlar = Array.from(document.querySelectorAll('button, a, [role="button"]'))
+        .filter(el => /pdf/i.test(el.textContent || '') && !el.closest('#cekModal'));
+    // Yalnız "yarpaq" elementlər (içində başqa PDF düyməsi olmayanlar)
+    const yarpaq = kandidatlar.filter(el => !kandidatlar.some(o => o !== el && el.contains(o)));
+    const gorunen = yarpaq.filter(el => el.style.display !== 'none');
+    gorunen.slice(1).forEach(el => { el.style.display = 'none'; });
+}
+let _pdfObserver = null;
+function pdfDuplikatNezaret() {
+    if (_pdfObserver) _pdfObserver.disconnect();
+    let tm = null;
+    _pdfObserver = new MutationObserver(() => {
+        clearTimeout(tm);
+        tm = setTimeout(() => {
+            if (!document.getElementById('ad-container')) { _pdfObserver.disconnect(); return; }
+            pdfDuplikatTemizle();
+        }, 50);
+    });
+    _pdfObserver.observe(document.body, {childList: true, subtree: true});
+    pdfDuplikatTemizle();
+}
+
 function adminPanel() {
     const i = istifadeciAl();
     app.appendChild(makeHeader('👨‍💼 Admin Paneli', i.ad, 'admin'));
@@ -1612,72 +1636,16 @@ function adminPanel() {
         Chart.defaults.borderColor = 'rgba(255,255,255,0.1)';
     }
     ad_render();
+    pdfDuplikatNezaret();
 }
 
 function yenileBtn(func) {
     return h('button', {style: 'background:#3498db; margin-bottom:15px; padding:10px 20px; border:none; border-radius:8px; color:#fff; cursor:pointer; font-weight:600;', onclick: () => { func(); toast('✅ Yeniləndi', 'info', 1500); }}, '🔄 Yenilə');
 }
 
-function ad_butunDataniPdf() {
-    const aktivTab = document.querySelector('#ad-container .tabs .tab.active');
-    const tab = aktivTab ? aktivTab.getAttribute('data-tab') : 'isciler';
-    ad_sehifePdf(tab);
-}
-
-function ad_sehifePdf(tab) {
-    const panel = document.getElementById('ad-p-' + tab);
-    if (!panel) { toast('❌ PDF üçün səhifə tapılmadı.', 'error'); return; }
-    const win = window.open('', '_blank');
-    if (!win) { toast('❌ PDF pəncərəsi bloklandı. Brauzerdə pop-up icazəsi verin.', 'error', 6000); return; }
-
-    const labels = Object.fromEntries(AD_TABS.map(([k, label]) => [k, label.replace(/^\S+\s*/, '')]));
-    const title = labels[tab] || 'Admin hesabatı';
-    const clone = panel.cloneNode(true);
-    clone.classList.add('pdf-print-panel');
-    clone.classList.remove('active');
-    clone.style.display = 'block';
-    clone.style.visibility = 'visible';
-    clone.style.position = 'static';
-    clone.style.width = '100%';
-    clone.style.maxWidth = 'none';
-
-    const sourceCanvases = panel.querySelectorAll('canvas');
-    const clonedCanvases = clone.querySelectorAll('canvas');
-    sourceCanvases.forEach((canvas, index) => {
-        const target = clonedCanvases[index];
-        if (!target) return;
-        try {
-            const img = document.createElement('img');
-            img.src = canvas.toDataURL('image/png');
-            img.alt = canvas.getAttribute('aria-label') || 'Qrafik';
-            img.style.cssText = 'display:block;max-width:100%;max-height:420px;margin:8px auto;object-fit:contain;';
-            target.replaceWith(img);
-        } catch (e) {}
-    });
-    clone.querySelectorAll('button, .pdf-export-btn').forEach(btn => btn.classList.add('pdf-hide'));
-    const headStyles = Array.from(document.head.querySelectorAll('style, link[rel="stylesheet"]')).map(node => node.outerHTML).join('\n');
-
-    win.document.open();
-    win.document.write(`<!doctype html><html lang="az"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Restoran — ${esc(title)} — PDF</title>${headStyles}<style>
-      html,body{background:#fff!important;color:#222!important;margin:0!important;padding:0!important;font-family:Arial,sans-serif!important}
-      body{padding:16px!important}.pdf-print-heading{font-size:22px;margin:0 0 5px;color:#222!important;border-bottom:2px solid #ddd;padding-bottom:10px}
-      .pdf-print-date{font-size:11px;color:#666;margin:0 0 16px}#ad-container,.container,.pdf-print-panel{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;background:#fff!important;color:#222!important}
-      .pdf-print-panel{display:block!important;visibility:visible!important;position:static!important}.pdf-hide,.tabs,.toast-wrap,.modal-overlay,.confirm-overlay{display:none!important}
-      table{width:100%!important;border-collapse:collapse!important}th,td{border:1px solid #bbb!important;color:#222!important;background:#fff!important;padding:6px!important;font-size:10px!important}
-      .qrafik-card,.chart-wrap{break-inside:avoid;max-width:100%!important}img{max-width:100%!important}@page{size:A4 portrait;margin:12mm}
-      @media print{body{padding:0!important}.pdf-print-panel{display:block!important}.pdf-hide,.tabs,button{display:none!important}thead{display:table-header-group}tr{break-inside:avoid}}
-    </style></head><body><h1 class="pdf-print-heading">Restoran sistemi — ${esc(title)}</h1><p class="pdf-print-date">İxrac tarixi: ${esc(new Date().toLocaleString('az-AZ'))}</p><main id="pdf-main"></main></body></html>`);
-    win.document.close();
-    const mount = win.document.getElementById('pdf-main');
-    if (mount) mount.appendChild(win.document.importNode(clone, true));
-    win.onload = () => setTimeout(() => { try { win.focus(); win.print(); } catch (e) {} }, 350);
-}
-
 function ad_render() {
     const c = document.getElementById('ad-container');
     c.innerHTML = '';
-    c.appendChild(h('div', {style: 'display:flex;justify-content:flex-end;margin:12px 0;'},
-        h('button', {className: 's-btn b-tamam', style: 'width:auto;padding:12px 18px;', onclick: ad_butunDataniPdf}, '📄 Açıq səhifəni PDF-ə çıxar')));
     const tabs = h('div', {className: 'tabs'});
     AD_TABS.forEach(([k, l], i) => tabs.appendChild(
         h('button', {className: 'tab' + (i === 0 ? ' active' : ''), 'data-tab': k, onclick: e => ad_tabSec(k, e.target)}, l)));
@@ -1686,12 +1654,6 @@ function ad_render() {
     ad_renderIsciler(); ad_renderAktivlik(); ad_renderSelfOrders();
     ad_renderAlislar(); ad_renderEndirimler(); ad_renderHesabat();
     ad_renderQrafikler(); ad_renderAyarlar(); ad_renderSifirla();
-    AD_TABS.forEach(([k]) => {
-        const panel = document.getElementById('ad-p-' + k);
-        if (!panel || panel.querySelector('.pdf-export-btn')) return;
-        const pdfBtn = h('button', {className: 's-btn b-tamam pdf-export-btn', style: 'width:auto;padding:10px 16px;margin:0 0 16px auto;display:block;', onclick: () => ad_sehifePdf(k)}, '📄 Bu səhifəni PDF kimi saxla');
-        panel.insertBefore(pdfBtn, panel.firstChild);
-    });
 }
 
 function ad_tabSec(tab, btn) {
@@ -1798,11 +1760,12 @@ function ad_renderAktivlik() {
 
 function ad_aktivlikYukle() {
     const sessMasalar = DATA.sessiyalar.filter(s => s.status === 'aktiv' && s.tip === 'masa');
+    const qrGruplar = qrAktivMasaGruplari();
     const elM = document.getElementById('ad-aktivMasalarList');
     if (elM) {
         elM.innerHTML = '';
-        if (!sessMasalar.length) elM.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:20px;'}, '✅ Yoxdur'));
-        else sessMasalar.sort((a, b) => b.id - a.id).forEach(s => {
+        if (!sessMasalar.length && !qrGruplar.length) elM.appendChild(h('p', {style: 'text-align:center;color:#aaa;padding:20px;'}, '✅ Yoxdur'));
+        sessMasalar.sort((a, b) => b.id - a.id).forEach(s => {
             const sif = DATA.sifarisler.filter(x => x.sessiya_id === s.id);
             const odenilib = s.odenis_novu != null;
             const odenisAd = odenilib ? (s.odenis_novu === 'kart' ? '💳 Kart' : '💵 Nağd') : '⏳ Ödənilməyib';
@@ -1815,6 +1778,32 @@ function ad_aktivlikYukle() {
                     h('div', {className: 'aktiv-masa-mebleg'}, pul(s.yekun))),
                 sif.length ? tbl : h('p', {style: 'color:#aaa;padding:10px;'}, 'Yoxdur'),
                 h('div', {className: 'aktiv-masa-btnler'}, h('button', {className: 'small-btn', style: 'background:#e74c3c;', onclick: () => ad_masaBagla(s.id)}, '💰 Masa Bağla'))
+            ));
+        });
+        // QR ilə sifariş verilmiş masalar
+        qrGruplar.forEach(g => {
+            const setirler = [];
+            g.siparisler.forEach(so => so.mehsullar.forEach(x => setirler.push(h('tr', {},
+                h('td', {}, x.ad), h('td', {}, x.miqdar), h('td', {}, pul(x.q)),
+                h('td', {style: 'color:#e94560;font-weight:bold;'}, pul(x.q * x.miqdar)),
+                h('td', {style: 'color:#aaa;font-size:12px;'}, saatDeqiqe(so.tarix))))));
+            const tbl = h('table', {style: 'margin-top:15px;'},
+                h('thead', {}, h('tr', {}, ...['Məhsul', 'Miqdar', 'Qiymət', 'Məbləğ', 'Saat'].map(x => h('th', {}, x)))),
+                h('tbody', {}, ...setirler));
+            const statuslar = [...new Set(g.siparisler.map(so => so.status))].map(st =>
+                h('span', {style: `display:inline-block;margin:6px 6px 0 0;padding:3px 10px;border-radius:20px;background:${QR_STATUS_RENG[st]}25;border:1px solid ${QR_STATUS_RENG[st]};color:${QR_STATUS_RENG[st]};font-size:12px;font-weight:bold;`}, QR_STATUS_AD[st] || st));
+            const hazirBtnler = g.siparisler.filter(so => so.status === 'hazirlanir').map(so =>
+                h('button', {className: 'small-btn', style: 'background:#2ecc71;', onclick: () => ad_selfOrderStatus(so.id, 'hazir')}, '🎉 Hazır'));
+            elM.appendChild(h('div', {className: 'aktiv-masa-kart', style: 'border-color:#3498db;'},
+                h('div', {className: 'aktiv-masa-header'},
+                    h('div', {},
+                        h('div', {className: 'aktiv-masa-ad', style: 'color:#3498db;'}, '📱 ' + g.masa_ad),
+                        h('div', {className: 'aktiv-masa-info'}, `QR Self-Order · ${g.siparisler.length} sifariş · 🕒 ${saatDeqiqe(g.baslama)}`),
+                        h('div', {}, ...statuslar),
+                        h('div', {className: 'aktiv-masa-timer'}, h('span', {}, '⏱️'), h('span', {className: 'aktiv-timer', 'data-baslama': g.baslama}, '00:00:00'))),
+                    h('div', {className: 'aktiv-masa-mebleg'}, pul(cem(g.siparisler, so => so.toplam)))),
+                tbl,
+                hazirBtnler.length ? h('div', {className: 'aktiv-masa-btnler'}, ...hazirBtnler) : null
             ));
         });
     }
@@ -1911,7 +1900,6 @@ function ad_selfOrdersYukle() {
         );
         const btnler = h('div', {className: 'aktiv-masa-btnler', style: 'margin-top:15px;'},
             so.status === 'hazirlanir' ? h('button', {className: 'small-btn', style: 'background:#2ecc71;', onclick: () => ad_selfOrderStatus(so.id, 'hazir')}, '🎉 Hazır') : null,
-            so.status === 'hazir' ? h('button', {className: 'small-btn', style: 'background:#27ae60;', onclick: () => ad_selfOrderStatus(so.id, 'catdirildi')}, '📦 Çatdırıldı') : null,
             so.status !== 'legv' && so.status !== 'catdirildi' ? h('button', {className: 'small-btn', style: 'background:#e74c3c;', onclick: () => ad_selfOrderStatus(so.id, 'legv')}, '❌ Ləğv') : null
         );
         el.appendChild(h('div', {className: 'aktiv-masa-kart', style: `border-color:${statusReng};`},
@@ -1926,7 +1914,17 @@ function ad_selfOrdersYukle() {
 }
 
 async function ad_selfOrderStatus(id, status) {
-    try { await FB.update(DR('selfOrders/' + id), {status}); toast('✅', 'success'); }
+    try {
+        const so = DATA.selfOrders.find(x => x.id === id);
+        await FB.update(DR('selfOrders/' + id), {status});
+        // Ləğv olunanda masada başqa aktiv QR yoxdursa masanı boşalt
+        if (status === 'legv' && so && so.masa_id) {
+            const basqa = DATA.selfOrders.some(x => x.id !== id && x.masa_id === so.masa_id && QR_AKTIV_STATUS.includes(x.status));
+            const sess = aktivSessiya(so.masa_id);
+            if (!basqa && !sess) await FB.update(DR('masalar/' + so.masa_id), {status: 'bos'});
+        }
+        toast('✅', 'success');
+    }
     catch (err) { toast('❌ ' + err.message, 'error'); }
     setTimeout(ad_selfOrdersYukle, 300);
 }
